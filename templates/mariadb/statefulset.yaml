@@ -1,0 +1,86 @@
+{{- if .Values.database.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "seafile.mariadb.fullname" . }}
+  labels:
+    {{- include "seafile.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mariadb
+spec:
+  serviceName: {{ include "seafile.mariadb.fullname" . }}
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "seafile.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: mariadb
+  template:
+    metadata:
+      labels:
+        {{- include "seafile.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: mariadb
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.database.persistence.existingClaim }}
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: {{ .Values.database.persistence.existingClaim }}
+      {{- else if not .Values.database.persistence.enabled }}
+      volumes:
+      - name: data
+        emptyDir: {}
+      {{- end }}
+      containers:
+      - name: mariadb
+        image: "{{ .Values.database.image.repository }}:{{ .Values.database.image.tag }}"
+        imagePullPolicy: {{ .Values.database.image.pullPolicy }}
+        env:
+        - name: MARIADB_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "seafile.database.secretName" . }}
+              key: mariadb-root-password
+        # Базы и пользователя создаёт сам Seafile под root, поэтому
+        # MARIADB_DATABASE и MARIADB_USER здесь не задаются.
+        - name: MARIADB_AUTO_UPGRADE
+          value: "1"
+        - name: MYSQL_LOG_CONSOLE
+          value: "true"
+        ports:
+        - name: mysql
+          containerPort: 3306
+          protocol: TCP
+        livenessProbe:
+          exec:
+            command: ["/usr/local/bin/healthcheck.sh", "--connect", "--innodb_initialized"]
+          initialDelaySeconds: 30
+          periodSeconds: 20
+        readinessProbe:
+          exec:
+            command: ["/usr/local/bin/healthcheck.sh", "--connect", "--innodb_initialized"]
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        {{- with .Values.database.resources }}
+        resources: {{- toYaml . | nindent 10 }}
+        {{- end }}
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/mysql
+  {{- if and .Values.database.persistence.enabled (not .Values.database.persistence.existingClaim) }}
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+      annotations:
+        helm.sh/resource-policy: keep
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      {{- with .Values.database.persistence.storageClass }}
+      storageClassName: {{ . | quote }}
+      {{- end }}
+      resources:
+        requests:
+          storage: {{ .Values.database.persistence.size }}
+  {{- end }}
+{{- end }}

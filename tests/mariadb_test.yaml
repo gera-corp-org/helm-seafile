@@ -1,0 +1,54 @@
+suite: mariadb
+templates:
+  - mariadb/statefulset.yaml
+  - mariadb/service.yaml
+  - mariadb/secret.yaml
+release:
+  name: t
+  namespace: seafile
+set:
+  seafile.serverHostname: seafile.example.com
+tests:
+  - it: при database.enabled false ничего не создаётся
+    set:
+      database.enabled: false
+      database.host: db.example.com
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: образ mariadb запинен, а не latest
+    template: mariadb/statefulset.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: docker.io/mariadb:11.4
+
+  - it: root-пароль приходит из секрета
+    template: mariadb/statefulset.yaml
+    set:
+      database.rootPassword: rootpass
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: MARIADB_ROOT_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: t-seafile-mariadb
+                key: mariadb-root-password
+
+  - it: сервис слушает 3306
+    template: mariadb/service.yaml
+    asserts:
+      - equal:
+          path: spec.ports[0].port
+          value: 3306
+
+  - it: при existingSecret секрет не создаётся
+    template: mariadb/secret.yaml
+    set:
+      database.existingSecret: my-db-secret
+    asserts:
+      - hasDocuments:
+          count: 0
