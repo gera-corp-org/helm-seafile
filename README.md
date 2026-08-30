@@ -103,6 +103,8 @@ seafile:
 | `imagePullSecrets` | Секреты для приватных registry | `[]` |
 | `replicaCount` | Число реплик StatefulSet. `0` останавливает Seafile без удаления релиза и данных | `1` |
 | `clusterDomain` | Домен кластера, используется для сборки внутренних FQDN MariaDB/Redis | `cluster.local` |
+| `nameOverride` | Переопределить короткое имя чарта в шаблонах | `""` |
+| `fullnameOverride` | Переопределить полное имя ресурсов (`<fullname>`) целиком | `""` |
 | `seafile.serverHostname` | Обязателен: FQDN/хост Seafile, без него генерируются нерабочие ссылки | `""` |
 | `seafile.protocol` | `http` или `https` | `https` |
 | `seafile.timeZone` | Часовой пояс контейнера | `Etc/UTC` |
@@ -150,7 +152,10 @@ seafile:
 | `ingress.traefik.buffering` | Создать Traefik Middleware для больших загрузок (см. ниже) | `false` |
 | `serviceAccount.create` | Создавать ServiceAccount | `true` |
 | `serviceAccount.name` | Имя ServiceAccount (если не `create`, использовать существующий) | `""` |
+| `serviceAccount.annotations` | Аннотации ServiceAccount | `{}` |
 | `resources` | Requests/limits контейнера Seafile | `{}` |
+| `podAnnotations` | Аннотации пода Seafile | `{}` |
+| `podLabels` | Дополнительные labels пода Seafile | `{}` |
 | `podSecurityContext`, `securityContext` | Контексты безопасности пода/контейнера | `{}` |
 | `nodeSelector`, `tolerations`, `affinity` | Планирование пода | `{}` / `[]` / `{}` |
 | `startupProbe`, `livenessProbe`, `readinessProbe` | Пробы контейнера Seafile (`/api2/ping/`) | см. `values.yaml` |
