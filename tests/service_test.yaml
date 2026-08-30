@@ -1,0 +1,35 @@
+suite: service
+templates:
+  - service.yaml
+release:
+  name: t
+  namespace: seafile
+set:
+  seafile.serverHostname: seafile.example.com
+tests:
+  - it: обычный ClusterIP, а не headless
+    asserts:
+      - equal:
+          path: spec.type
+          value: ClusterIP
+      - isNull:
+          path: spec.clusterIP
+
+  - it: ExternalName-сервиса memcached больше нет
+    asserts:
+      - hasDocuments:
+          count: 1
+
+  - it: порт webdav появляется только при включённом webdav
+    set:
+      seafile.webdav.enabled: true
+    asserts:
+      - lengthEqual:
+          path: spec.ports
+          count: 2
+
+  - it: селектор различает workload'ы чарта меткой component
+    asserts:
+      - equal:
+          path: spec.selector["app.kubernetes.io/component"]
+          value: seafile
