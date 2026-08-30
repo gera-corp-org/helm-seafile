@@ -1,0 +1,46 @@
+suite: redis
+templates:
+  - redis/statefulset.yaml
+  - redis/service.yaml
+  - redis/secret.yaml
+release:
+  name: t
+  namespace: seafile
+set:
+  seafile.serverHostname: seafile.example.com
+tests:
+  - it: при cache.enabled false ничего не создаётся
+    set:
+      cache.enabled: false
+      cache.host: redis.example.com
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: пароль не попадает в аргументы команды
+    template: redis/statefulset.yaml
+    set:
+      cache.password: redispass
+    asserts:
+      - notMatchRegex:
+          path: spec.template.spec.containers[0].args[-1]
+          pattern: redispass
+
+  - it: пароль приходит из секрета через переменную окружения
+    template: redis/statefulset.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: REDIS_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: t-seafile-redis
+                key: redis-password
+
+  - it: сервис слушает 6379
+    template: redis/service.yaml
+    asserts:
+      - equal:
+          path: spec.ports[0].port
+          value: 6379
