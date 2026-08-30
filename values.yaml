@@ -1,86 +1,139 @@
-# Default values for seafile-server.
-# This is a YAML-formatted file.
-# Declare variables to be passed into your templates.
+# Значения по умолчанию для чарта seafile.
 
-# Домен кластера. Использовался в шаблонах, но никогда не был объявлен,
+# Домен кластера. Использовался в шаблонах, но не был объявлен,
 # из-за чего FQDN рендерился с точкой на конце.
 clusterDomain: cluster.local
 
-memcached:
-  enabled: true
-  serviceFqdn: seafile-memcached
-  resourcesPreset: "small"
+nameOverride: ""
+fullnameOverride: ""
 
-mariadb:
-  enabled: true
+# 0 останавливает Seafile, не удаляя релиз и данные.
+replicaCount: 1
 
-redis:
-  enabled: true
-  global:
-    redis:
-      password: "redis"
-  architecture: standalone
+image:
+  repository: docker.io/seafileltd/seafile-mc
+  # Пусто — берётся appVersion чарта.
+  tag: ""
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
 
 seafile:
-  image: docker.io/seafileltd/seafile-mc:13.0.17
-  pause: false
-  persistence:
-    size: 10Gi
-    storageClassName: {}
-    existingClaim: {}
-  database:
-    hostname: seafile-mariadb
-    rootPasswordSecret:
-      name: seafile-mariadb
-      key: mariadb-root-password
+  # Обязателен: без него Seafile генерирует нерабочие ссылки.
+  serverHostname: ""
+  protocol: https
+  timeZone: Etc/UTC
+  logToStdout: false
+  admin:
+    email: ""
+    password: ""
+  # pwgen -s 40 1
+  jwtPrivateKey: ""
   webdav:
     enabled: false
-  podSecurityContext: {}
-  securityContext: {}
-  environment:
-  - name: TIME_ZONE
-    value: "Etc/UTC"
-  - name: INIT_SEAFILE_ADMIN_EMAIL
-    value: ""
-  - name: INIT_SEAFILE_ADMIN_PASSWORD
-    value: ""
-  - name: SEAFILE_SERVER_HOSTNAME
-    value: ""
-  - name: JWT_PRIVATE_KEY
-    value: "" #  pwgen -s 40 1
-  - name: SEAFILE_MYSQL_DB_USER
-    value: ""
-  - name: SEAFILE_MYSQL_DB_PASSWORD
-    value: ""
-  - name: SEAFILE_MYSQL_DB_PORT
-    value: "3306"
-  - name: SEAFILE_MYSQL_DB_CCNET_DB_NAME
-    value: ccnet_db
-  - name: SEAFILE_MYSQL_DB_SEAFILE_DB_NAME
-    value: seafile_db
-  - name: SEAFILE_MYSQL_DB_SEAHUB_DB_NAME
-    value: seahub_db
-  - name: CACHE_PROVIDER
-    value: redis
-  - name: REDIS_HOST
-    value: ""
-  - name: REDIS_PORT
-    value: "6379"
-  - name: REDIS_PASSWORD
-    value: ""
-  - name: SEAFILE_SERVER_PROTOCOL
-    value: https
+  # Секрет с ключами admin-email, admin-password, jwt-private-key.
+  # Задан — чарт свой секрет не создаёт.
+  existingSecret: ""
+  # Сырой список env. Добавляется последним, поэтому переопределяет
+  # всё вышестоящее. Сюда кладутся vault: ссылки для bank-vaults.
+  extraEnv: []
+  extraEnvFrom: []
 
-nodeSelector: {}
+database:
+  # false — использовать внешнюю БД, тогда host обязателен.
+  enabled: true
+  host: ""
+  port: 3306
+  user: seafile
+  password: ""
+  rootPassword: ""
+  # Секрет с ключами mariadb-root-password и mariadb-password.
+  existingSecret: ""
+  names:
+    ccnet: ccnet_db
+    seafile: seafile_db
+    seahub: seahub_db
+  image:
+    repository: docker.io/mariadb
+    tag: "11.4"
+    pullPolicy: IfNotPresent
+  persistence:
+    enabled: true
+    size: 8Gi
+    storageClass: ""
+    existingClaim: ""
+  resources: {}
+
+cache:
+  # Пробрасывается в CACHE_PROVIDER. Встроен только redis; внешний
+  # memcached задаётся provider: memcached вместе с host.
+  provider: redis
+  enabled: true
+  host: ""
+  port: 6379
+  password: ""
+  # Секрет с ключом redis-password.
+  existingSecret: ""
+  image:
+    repository: docker.io/redis
+    tag: "8-alpine"
+    pullPolicy: IfNotPresent
+  resources: {}
+
+persistence:
+  enabled: true
+  size: 10Gi
+  storageClass: ""
+  existingClaim: ""
+  annotations:
+    helm.sh/resource-policy: keep
+
+service:
+  type: ClusterIP
+  port: 80
 
 ingress:
-  annotations:
-    # use NGINX Ingress Controller
-    kubernetes.io/spec.ingressClassName: ""
-    # use Cert-Manager for LetsEncrypt Certificates
-    # cert-manager.io/issuer: "letsencrypt-prod"
-    cert-manager.io/cluster-issuer: ""
+  enabled: false
+  className: ""
+  annotations: {}
   host: ""
   tls:
-    host: ""
-    secretName: {}
+    enabled: false
+    secretName: ""
+  webdav:
+    path: /seafdav
+  traefik:
+    # Создаёт Middleware и подключает её к Ingress. Нужна для
+    # загрузки больших файлов через WebDAV.
+    buffering: false
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+resources: {}
+podAnnotations: {}
+podLabels: {}
+podSecurityContext: {}
+securityContext: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# Первичная инициализация БД занимает минуты, отсюда запас.
+startupProbe:
+  httpGet:
+    path: /api2/ping/
+    port: http
+  periodSeconds: 10
+  failureThreshold: 60
+livenessProbe:
+  httpGet:
+    path: /api2/ping/
+    port: http
+  periodSeconds: 20
+readinessProbe:
+  httpGet:
+    path: /api2/ping/
+    port: http
+  periodSeconds: 10
