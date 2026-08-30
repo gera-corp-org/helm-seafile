@@ -1,0 +1,101 @@
+suite: statefulset
+templates:
+  - statefulset.yaml
+  - secret.yaml
+release:
+  name: t
+  namespace: seafile
+set:
+  seafile.serverHostname: seafile.example.com
+tests:
+  - it: образ собирается из repository и appVersion
+    template: statefulset.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: docker.io/seafileltd/seafile-mc:13.0.25
+
+  - it: ни один пароль не задан открытым текстом
+    template: statefulset.yaml
+    set:
+      seafile.admin.password: s3cret
+      database.password: dbpass
+      cache.password: redispass
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: SEAFILE_MYSQL_DB_PASSWORD
+            value: dbpass
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: SEAFILE_MYSQL_DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: t-seafile-mariadb
+                key: mariadb-password
+
+  - it: extraEnv добавляется последним и переопределяет остальное
+    template: statefulset.yaml
+    set:
+      seafile.extraEnv:
+        - name: TIME_ZONE
+          value: Europe/Prague
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].env[-1].name
+          value: TIME_ZONE
+      - equal:
+          path: spec.template.spec.containers[0].env[-1].value
+          value: Europe/Prague
+
+  - it: порт webdav появляется только при включённом webdav
+    template: statefulset.yaml
+    asserts:
+      - lengthEqual:
+          path: spec.template.spec.containers[0].ports
+          count: 1
+
+  - it: при webdav открывается второй порт
+    template: statefulset.yaml
+    set:
+      seafile.webdav.enabled: true
+    asserts:
+      - lengthEqual:
+          path: spec.template.spec.containers[0].ports
+          count: 2
+
+  - it: provider memcached выдаёт MEMCACHED вместо REDIS
+    template: statefulset.yaml
+    set:
+      cache.provider: memcached
+      cache.enabled: false
+      cache.host: mc.example.com
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: MEMCACHED_HOST
+            value: mc.example.com
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: REDIS_HOST
+            value: mc.example.com
+
+  - it: без serverHostname рендер падает
+    template: statefulset.yaml
+    set:
+      seafile.serverHostname: ""
+    asserts:
+      - failedTemplate:
+          errorMessage: "seafile.serverHostname is required"
+
+  - it: volumeClaimTemplate не создаётся при existingClaim
+    template: statefulset.yaml
+    set:
+      persistence.existingClaim: my-pvc
+    asserts:
+      - isNull:
+          path: spec.volumeClaimTemplates

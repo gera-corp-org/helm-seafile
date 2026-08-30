@@ -1,0 +1,38 @@
+suite: helpers
+templates:
+  - statefulset.yaml
+  - secret.yaml
+release:
+  name: t
+  namespace: seafile
+tests:
+  - it: database.host по умолчанию указывает на встроенный сервис с clusterDomain
+    template: statefulset.yaml
+    set:
+      seafile.serverHostname: seafile.example.com
+      database.enabled: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: SEAFILE_MYSQL_DB_HOST
+            value: t-seafile-mariadb.seafile.svc.cluster.local
+
+  - it: FQDN никогда не оканчивается точкой
+    template: statefulset.yaml
+    set:
+      seafile.serverHostname: seafile.example.com
+    asserts:
+      - notMatchRegex:
+          path: spec.template.spec.containers[0].env[?(@.name=="SEAFILE_MYSQL_DB_HOST")].value
+          pattern: '\.$'
+
+  - it: внешняя БД без host падает с внятной ошибкой
+    template: statefulset.yaml
+    set:
+      seafile.serverHostname: seafile.example.com
+      database.enabled: false
+      database.host: ""
+    asserts:
+      - failedTemplate:
+          errorMessage: "database.host is required when database.enabled is false"
