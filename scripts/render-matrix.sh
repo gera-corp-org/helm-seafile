@@ -35,6 +35,8 @@ run "webdav"         --set ingress.enabled=true --set ingress.host=seafile.examp
                      --set seafile.webdav.enabled=true
 run "traefik"        --set ingress.enabled=true --set ingress.host=seafile.example.com \
                      --set ingress.className=traefik --set ingress.traefik.buffering=true
+run "annotation-override" --set ingress.enabled=true --set ingress.host=seafile.example.com \
+                          --set 'ingress.annotations.nginx\.ingress\.kubernetes\.io/proxy-body-size=64m'
 run "external-db"    --set database.enabled=false --set database.host=db.example.com
 run "external-cache" --set cache.enabled=false --set cache.host=redis.example.com
 run "existing-secrets" --set seafile.existingSecret=s --set database.existingSecret=d \

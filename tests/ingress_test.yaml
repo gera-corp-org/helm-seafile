@@ -99,3 +99,27 @@ tests:
     asserts:
       - hasDocuments:
           count: 0
+
+  - it: без пользовательских annotations дефолт proxy-body-size на месте ровно один раз
+    template: ingress.yaml
+    set:
+      ingress.enabled: true
+      ingress.host: seafile.example.com
+    asserts:
+      - equal:
+          path: metadata.annotations
+          value:
+            nginx.ingress.kubernetes.io/proxy-body-size: "0"
+
+  - it: пользовательская annotations.proxy-body-size побеждает дефолт без дублирования ключа
+    template: ingress.yaml
+    set:
+      ingress.enabled: true
+      ingress.host: seafile.example.com
+      ingress.annotations:
+        nginx.ingress.kubernetes.io/proxy-body-size: 1m
+    asserts:
+      - equal:
+          path: metadata.annotations
+          value:
+            nginx.ingress.kubernetes.io/proxy-body-size: "1m"
