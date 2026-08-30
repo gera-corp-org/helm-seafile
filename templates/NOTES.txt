@@ -1,0 +1,35 @@
+Seafile {{ .Chart.AppVersion }} установлен как релиз {{ .Release.Name }}.
+
+{{- if .Values.ingress.enabled }}
+
+  Адрес: {{ .Values.seafile.protocol }}://{{ .Values.ingress.host }}
+{{- else }}
+
+  Ingress выключен. Пробросить порт локально:
+
+    kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "seafile.fullname" . }} 8000:{{ .Values.service.port }}
+
+  Затем открыть http://localhost:8000
+{{- end }}
+
+{{- if not .Values.seafile.existingSecret }}
+{{- if not .Values.seafile.jwtPrivateKey }}
+
+  ВНИМАНИЕ: seafile.jwtPrivateKey пуст. Seafile не стартует без него.
+  Сгенерировать:  pwgen -s 40 1
+{{- end }}
+{{- if not .Values.seafile.admin.email }}
+
+  ВНИМАНИЕ: seafile.admin.email пуст — учётная запись администратора
+  не будет создана при первом запуске.
+{{- end }}
+{{- end }}
+
+  Первый запуск инициализирует базы и занимает несколько минут.
+  Прогресс:
+
+    kubectl logs -n {{ .Release.Namespace }} -f {{ include "seafile.fullname" . }}-0
+
+  Проверить работоспособность:
+
+    helm test {{ .Release.Name }} -n {{ .Release.Namespace }}
