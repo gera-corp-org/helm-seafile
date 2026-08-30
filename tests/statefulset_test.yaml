@@ -15,6 +15,38 @@ tests:
           path: spec.template.spec.containers[0].image
           value: docker.io/seafileltd/seafile-mc:13.0.25
 
+  - it: селектор и под несут метку component, отличающую от mariadb/redis
+    template: statefulset.yaml
+    asserts:
+      - equal:
+          path: spec.selector.matchLabels["app.kubernetes.io/component"]
+          value: seafile
+      - equal:
+          path: spec.template.metadata.labels["app.kubernetes.io/component"]
+          value: seafile
+
+  - it: FORCE_HTTPS_IN_CONF выводится из protocol, а не захардкожен
+    template: statefulset.yaml
+    set:
+      seafile.protocol: https
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: FORCE_HTTPS_IN_CONF
+            value: "true"
+
+  - it: FORCE_HTTPS_IN_CONF false при protocol http
+    template: statefulset.yaml
+    set:
+      seafile.protocol: http
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: FORCE_HTTPS_IN_CONF
+            value: "false"
+
   - it: ни один пароль не задан открытым текстом
     template: statefulset.yaml
     set:
