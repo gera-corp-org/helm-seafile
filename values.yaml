@@ -2,6 +2,10 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
+# Домен кластера. Использовался в шаблонах, но никогда не был объявлен,
+# из-за чего FQDN рендерился с точкой на конце.
+clusterDomain: cluster.local
+
 memcached:
   enabled: true
   serviceFqdn: seafile-memcached
