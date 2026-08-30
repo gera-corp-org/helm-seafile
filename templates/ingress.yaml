@@ -4,17 +4,16 @@ kind: Ingress
 metadata:
   name: {{ include "seafile.fullname" . }}
   labels: {{- include "seafile.labels" . | nindent 4 }}
-  annotations:
-    # Снимает ограничение на размер тела запроса: Seafile грузит
-    # файлы произвольного размера.
-    # https://github.com/kubernetes/ingress-nginx/blob/main/docs/user-guide/nginx-configuration/annotations.md#custom-max-body-size
-    nginx.ingress.kubernetes.io/proxy-body-size: "0"
-    {{- if .Values.ingress.traefik.buffering }}
-    traefik.ingress.kubernetes.io/router.middlewares: {{ printf "%s-%s-buffering@kubernetescrd" .Release.Namespace (include "seafile.fullname" .) }}
-    {{- end }}
-    {{- with .Values.ingress.annotations }}
-    {{- toYaml . | nindent 4 }}
-    {{- end }}
+  # Снимает ограничение на размер тела запроса: Seafile грузит
+  # файлы произвольного размера. Пользовательские ingress.annotations
+  # побеждают эти дефолты — merge(dst, src) даёт приоритет dst.
+  # https://github.com/kubernetes/ingress-nginx/blob/main/docs/user-guide/nginx-configuration/annotations.md#custom-max-body-size
+  {{- $annotations := dict "nginx.ingress.kubernetes.io/proxy-body-size" "0" }}
+  {{- if .Values.ingress.traefik.buffering }}
+  {{- $_ := set $annotations "traefik.ingress.kubernetes.io/router.middlewares" (printf "%s-%s-buffering@kubernetescrd" .Release.Namespace (include "seafile.fullname" .)) }}
+  {{- end }}
+  {{- $annotations = merge (deepCopy .Values.ingress.annotations) $annotations }}
+  annotations: {{- toYaml $annotations | nindent 4 }}
 spec:
   {{- with .Values.ingress.className }}
   ingressClassName: {{ . | quote }}
