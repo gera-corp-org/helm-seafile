@@ -20,3 +20,12 @@
 .idea/
 *.tmproj
 .vscode/
+# Не нужно внутри пакета
+.github/
+docs/
+scripts/
+tests/
+Chart.lock
+# ArtifactHub читает его из реестра как отдельный OCI-артефакт,
+# а не из содержимого чарта
+artifacthub-repo.yml

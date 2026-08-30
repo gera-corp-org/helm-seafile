@@ -1,10 +1,10 @@
 apiVersion: v2
 name: seafile
 type: application
-version: 0.1.5
-appVersion: 13.0.17
+version: 0.2.0
+appVersion: "13.0.25"
 icon: https://www.seafile.com/media/img/seafile-logo.png
-home: https://github.com/gera-corp/helm-seafile
+home: https://github.com/gera-corp-org/helm-seafile
 description: Seafile Server, Reliable and Performant File Sync and Share Solution on Kubernetes
 keywords:
   - cloud
@@ -12,29 +12,48 @@ keywords:
   - share
   - sync
 sources:
-  - https://github.com/gera-corp/helm-seafile
+  - https://github.com/gera-corp-org/helm-seafile
 maintainers:
-  - name: "gera"
-kubeVersion: ">=1.16.0-0"
+  - name: gera
+    email: exandore@gmail.com
+kubeVersion: ">=1.19.0-0"
 annotations:
   artifacthub.io/changes: |
-    - Update to Seafile 13.0.17
+    - kind: removed
+      description: "Зависимости Bitnami убраны — их образы удалены из Docker Hub и чарт не устанавливался"
+    - kind: removed
+      description: "memcached больше не поддерживается как встроенный сервис: с Seafile 13 кэшем стал Redis"
+    - kind: changed
+      description: "BREAKING: MariaDB и Redis теперь собственные шаблоны на официальных образах, values переехали в database.* и cache.*"
+    - kind: changed
+      description: "BREAKING: seafile.environment заменён структурированными полями и seafile.extraEnv"
+    - kind: changed
+      description: "BREAKING: seafile.image заменён на image.repository и image.tag"
+    - kind: changed
+      description: "BREAKING: ingress.enabled по умолчанию false — раньше Ingress создавался всегда"
+    - kind: fixed
+      description: "Ingress с TLS больше не рендерит secretName: map[] и пустой host"
+    - kind: fixed
+      description: "webdav-Ingress создаётся только при seafile.webdav.enabled и указывает на существующий порт"
+    - kind: fixed
+      description: "clusterDomain объявлен — адрес БД больше не оканчивается точкой"
+    - kind: fixed
+      description: "Traefik Middleware теперь действительно подключается к Ingress аннотацией router.middlewares"
+    - kind: security
+      description: "Пароли переехали в Secret и подключаются через secretKeyRef, открытым текстом в spec пода их больше нет"
   artifacthub.io/images: |
-    - name: Seafile
-      image: docker.io/seafileltd/seafile-mc:13.0.17
+    - name: seafile
+      image: docker.io/seafileltd/seafile-mc:13.0.25
+    - name: mariadb
+      image: docker.io/mariadb:11.4
+    - name: redis
+      image: docker.io/redis:8-alpine
+  artifacthub.io/links: |
+    - name: source
+      url: https://github.com/gera-corp-org/helm-seafile
+    - name: Seafile manual
+      url: https://manual.seafile.com/13.0/
   artifacthub.io/maintainers: |
     - name: gera
       email: exandore@gmail.com
-dependencies:
-  - name: mariadb
-    version: 19.1.2
-    repository: https://charts.bitnami.com/bitnami
-    condition: mariadb.enabled
-  - name: memcached
-    version: 7.6.5
-    repository: https://charts.bitnami.com/bitnami
-    condition: memcached.enabled
-  - name: redis
-    repository: https://charts.bitnami.com/bitnami
-    version: 21.2.13
-    condition: redis.enabled
+  artifacthub.io/license: MIT
