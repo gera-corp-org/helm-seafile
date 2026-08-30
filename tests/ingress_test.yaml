@@ -1,0 +1,101 @@
+suite: ingress
+templates:
+  - ingress.yaml
+  - middleware.yaml
+release:
+  name: t
+  namespace: seafile
+set:
+  seafile.serverHostname: seafile.example.com
+tests:
+  - it: по умолчанию Ingress не создаётся
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: без tls.enabled секция tls отсутствует
+    template: ingress.yaml
+    set:
+      ingress.enabled: true
+      ingress.host: seafile.example.com
+    asserts:
+      - isNull:
+          path: spec.tls
+      - equal:
+          path: spec.rules[0].host
+          value: seafile.example.com
+
+  - it: tls берёт host из ingress.host и не рендерит map
+    template: ingress.yaml
+    set:
+      ingress.enabled: true
+      ingress.host: seafile.example.com
+      ingress.tls.enabled: true
+      ingress.tls.secretName: seafile-tls
+    asserts:
+      - equal:
+          path: spec.tls[0].hosts[0]
+          value: seafile.example.com
+      - equal:
+          path: spec.tls[0].secretName
+          value: seafile-tls
+
+  - it: className становится полем, а не аннотацией
+    template: ingress.yaml
+    set:
+      ingress.enabled: true
+      ingress.host: seafile.example.com
+      ingress.className: nginx
+    asserts:
+      - equal:
+          path: spec.ingressClassName
+          value: nginx
+      - isNull:
+          path: metadata.annotations["kubernetes.io/spec.ingressClassName"]
+
+  - it: без webdav путь seafdav отсутствует
+    template: ingress.yaml
+    set:
+      ingress.enabled: true
+      ingress.host: seafile.example.com
+    asserts:
+      - lengthEqual:
+          path: spec.rules[0].http.paths
+          count: 1
+
+  - it: с webdav появляется второй путь на порт 8080
+    template: ingress.yaml
+    set:
+      ingress.enabled: true
+      ingress.host: seafile.example.com
+      seafile.webdav.enabled: true
+    asserts:
+      - lengthEqual:
+          path: spec.rules[0].http.paths
+          count: 2
+      - equal:
+          path: spec.rules[0].http.paths[1].path
+          value: /seafdav
+      - equal:
+          path: spec.rules[0].http.paths[1].backend.service.port.number
+          value: 8080
+
+  - it: buffering создаёт Middleware и подключает её аннотацией
+    template: ingress.yaml
+    set:
+      ingress.enabled: true
+      ingress.host: seafile.example.com
+      ingress.traefik.buffering: true
+    asserts:
+      - equal:
+          path: metadata.annotations["traefik.ingress.kubernetes.io/router.middlewares"]
+          value: seafile-t-seafile-buffering@kubernetescrd
+
+  - it: Middleware без buffering не создаётся
+    template: middleware.yaml
+    set:
+      ingress.enabled: true
+      ingress.host: seafile.example.com
+    asserts:
+      - hasDocuments:
+          count: 0

@@ -1,9 +1,9 @@
-{{- if eq (index .Values.ingress.annotations "kubernetes.io/spec.ingressClassName" | default "") "traefik" }}
+{{- if and .Values.ingress.enabled .Values.ingress.traefik.buffering }}
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
   name: {{ include "seafile.fullname" . }}-buffering
-  namespace: {{ .Release.Namespace }}
+  labels: {{- include "seafile.labels" . | nindent 4 }}
 spec:
   buffering:
     maxRequestBodyBytes: 0
