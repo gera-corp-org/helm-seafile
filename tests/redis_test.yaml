@@ -22,9 +22,9 @@ tests:
     set:
       cache.password: redispass
     asserts:
-      - notMatchRegex:
-          path: spec.template.spec.containers[0].args[-1]
-          pattern: redispass
+      - notContains:
+          path: spec.template.spec.containers[0].args
+          content: redispass
 
   - it: пароль приходит из секрета через переменную окружения
     template: redis/statefulset.yaml
@@ -37,6 +37,19 @@ tests:
               secretKeyRef:
                 name: t-seafile-redis
                 key: redis-password
+
+  - it: command не переопределяется (чтобы entrypoint работал)
+    template: redis/statefulset.yaml
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].command
+
+  - it: пароль передаётся через переменную в args, не раскрытым
+    template: redis/statefulset.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: "$(REDIS_PASSWORD)"
 
   - it: сервис слушает 6379
     template: redis/service.yaml

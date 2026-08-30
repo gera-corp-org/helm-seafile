@@ -26,9 +26,9 @@ spec:
       - name: redis
         image: "{{ .Values.cache.image.repository }}:{{ .Values.cache.image.tag }}"
         imagePullPolicy: {{ .Values.cache.image.pullPolicy }}
-        command: ["/bin/sh", "-c"]
         args:
-        - exec redis-server --requirepass "$REDIS_PASSWORD"
+        - "--requirepass"
+        - "$(REDIS_PASSWORD)"
         env:
         - name: REDIS_PASSWORD
           valueFrom:
