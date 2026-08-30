@@ -1,0 +1,61 @@
+{{- if .Values.cache.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "seafile.redis.fullname" . }}
+  labels:
+    {{- include "seafile.labels" . | nindent 4 }}
+    app.kubernetes.io/component: redis
+spec:
+  serviceName: {{ include "seafile.redis.fullname" . }}
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "seafile.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: redis
+  template:
+    metadata:
+      labels:
+        {{- include "seafile.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: redis
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: redis
+        image: "{{ .Values.cache.image.repository }}:{{ .Values.cache.image.tag }}"
+        imagePullPolicy: {{ .Values.cache.image.pullPolicy }}
+        command: ["/bin/sh", "-c"]
+        args:
+        - exec redis-server --requirepass "$REDIS_PASSWORD"
+        env:
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "seafile.cache.secretName" . }}
+              key: redis-password
+        ports:
+        - name: redis
+          containerPort: 6379
+          protocol: TCP
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - redis-cli --no-auth-warning -a "$REDIS_PASSWORD" ping
+          initialDelaySeconds: 10
+          periodSeconds: 20
+        readinessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - redis-cli --no-auth-warning -a "$REDIS_PASSWORD" ping
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        {{- with .Values.cache.resources }}
+        resources: {{- toYaml . | nindent 10 }}
+        {{- end }}
+{{- end }}
