@@ -1,0 +1,15 @@
+suite: метаданные чарта
+templates:
+  - statefulset.yaml
+  - secret.yaml
+release:
+  name: t
+tests:
+  - it: appVersion попадает в метку версии
+    template: statefulset.yaml
+    set:
+      seafile.serverHostname: seafile.example.com
+    asserts:
+      - equal:
+          path: metadata.labels["app.kubernetes.io/version"]
+          value: "13.0.25"
