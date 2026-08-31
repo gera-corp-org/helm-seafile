@@ -33,3 +33,7 @@ Chart.lock
 # ArtifactHub reads this from the registry as a separate OCI artifact,
 # not from the chart contents
 artifacthub-repo.yml
+# The public key is a trust anchor, not chart content — shipping it inside
+# the artifact it verifies would be circular. Artifact Hub fetches it from
+# the URL in the signKey annotation.
+KEY.gpg

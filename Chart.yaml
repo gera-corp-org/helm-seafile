@@ -1,7 +1,7 @@
 apiVersion: v2
 name: seafile
 type: application
-version: 0.3.0
+version: 0.3.1
 appVersion: "13.0.25"
 icon: https://www.seafile.com/media/img/seafile-logo.png
 home: https://github.com/gera-corp-org/helm-seafile
@@ -19,6 +19,8 @@ maintainers:
 kubeVersion: ">=1.19.0-0"
 annotations:
   artifacthub.io/changes: |
+    - kind: added
+      description: "Charts are signed: every release now carries a provenance file, verifiable with the public key in KEY.gpg"
     - kind: added
       description: "podSecurityContext and securityContext for the built-in MariaDB and Redis, so both can run as non-root — verified on a cluster with runAsUser 999 and an empty capability set"
     - kind: added
@@ -61,3 +63,6 @@ annotations:
     - name: gera
       email: exandore@gmail.com
   artifacthub.io/license: MIT
+  artifacthub.io/signKey: |
+    fingerprint: 8E7C9825847DDCEA328ED304BE5A2B52302C7EEF
+    url: https://raw.githubusercontent.com/gera-corp-org/helm-seafile/master/KEY.gpg
