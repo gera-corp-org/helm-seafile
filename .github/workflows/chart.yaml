@@ -42,6 +42,19 @@ jobs:
           helm lint . --strict --set seafile.serverHostname=seafile.example.com
           helm unittest .
 
+      - name: Check the README install examples match the chart version
+        run: |
+          # The README went stale before — it advertised 0.1.1 while the
+          # chart was 0.1.5 — so this is checked rather than remembered.
+          want=$(helm show chart . | awk '/^version:/ {print $2}' | tr -d '"')
+          bad=$(grep -oE -- '--version [0-9]+\.[0-9]+\.[0-9]+' README.md \
+                | awk '{print $2}' | sort -u | grep -v "^${want}$" || true)
+          if [ -n "$bad" ]; then
+            echo "::error::README installs $bad, chart version is $want"
+            exit 1
+          fi
+          echo "README install examples all pin $want"
+
       - name: Render every branch of the templates
         # This is the exact step whose absence once let secretName: map[]
         # slip into a published chart.

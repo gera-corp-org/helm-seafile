@@ -27,7 +27,7 @@ Required values: `seafile.serverHostname`, `seafile.jwtPrivateKey`,
 
 ```bash
 helm install seafile oci://ghcr.io/gera-corp-org/helm-charts/seafile \
-  --version 0.2.0 \
+  --version 0.2.1 \
   --namespace seafile --create-namespace \
   --set seafile.serverHostname=seafile.example.com \
   --set seafile.jwtPrivateKey=$(pwgen -s 40 1) \
@@ -43,7 +43,7 @@ For a persistent configuration, keep these same values in
 
 ```bash
 helm install seafile oci://ghcr.io/gera-corp-org/helm-charts/seafile \
-  --version 0.2.0 \
+  --version 0.2.1 \
   --namespace seafile --create-namespace \
   --values my-values.yaml
 ```
@@ -198,7 +198,7 @@ StatefulSets, disable `enabled` and set the host:
 
 ```bash
 helm install seafile oci://ghcr.io/gera-corp-org/helm-charts/seafile \
-  --version 0.2.0 \
+  --version 0.2.1 \
   --set seafile.serverHostname=seafile.example.com \
   --set seafile.jwtPrivateKey=$(pwgen -s 40 1) \
   --set seafile.admin.email=admin@example.com \
@@ -318,7 +318,7 @@ management without recreating the volume — via
 
 ```bash
 helm install seafile oci://ghcr.io/gera-corp-org/helm-charts/seafile \
-  --version 0.2.0 \
+  --version 0.2.1 \
   --set seafile.serverHostname=seafile.example.com \
   --set seafile.jwtPrivateKey=$(pwgen -s 40 1) \
   --set seafile.admin.email=admin@example.com \
