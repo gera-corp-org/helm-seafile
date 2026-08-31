@@ -33,3 +33,12 @@ tests:
       - equal:
           path: spec.selector["app.kubernetes.io/component"]
           value: seafile
+
+  # Находка 5: targetPort должен быть именем порта контейнера ("http"), а
+  # не числом — kubeconform принимает любую строку/число как IntOrString,
+  # поэтому подмена ловится только явным ассертом на значение.
+  - it: targetPort ссылается на именованный порт контейнера, а не на число
+    asserts:
+      - equal:
+          path: spec.ports[0].targetPort
+          value: http

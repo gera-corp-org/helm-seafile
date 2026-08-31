@@ -36,3 +36,32 @@ tests:
     asserts:
       - failedTemplate:
           errorMessage: "database.host is required when database.enabled is false"
+
+  # Находка 5: явный database.host обязан побеждать встроенный FQDN даже
+  # когда database.enabled true — иначе миграция на управляемую БД без
+  # явного отключения enabled молча продолжит стучаться во встроенный сервис.
+  - it: явный database.host побеждает встроенный сервис даже при database.enabled true
+    template: statefulset.yaml
+    set:
+      seafile.serverHostname: seafile.example.com
+      database.enabled: true
+      database.host: managed-db.example.com
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: SEAFILE_MYSQL_DB_HOST
+            value: managed-db.example.com
+
+  - it: явный cache.host побеждает встроенный сервис даже при cache.enabled true
+    template: statefulset.yaml
+    set:
+      seafile.serverHostname: seafile.example.com
+      cache.enabled: true
+      cache.host: managed-redis.example.com
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: REDIS_HOST
+            value: managed-redis.example.com
