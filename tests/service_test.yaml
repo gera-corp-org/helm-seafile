@@ -7,7 +7,7 @@ release:
 set:
   seafile.serverHostname: seafile.example.com
 tests:
-  - it: обычный ClusterIP, а не headless
+  - it: renders a plain ClusterIP service, not headless
     asserts:
       - equal:
           path: spec.type
@@ -15,12 +15,12 @@ tests:
       - isNull:
           path: spec.clusterIP
 
-  - it: ExternalName-сервиса memcached больше нет
+  - it: the memcached ExternalName service is gone
     asserts:
       - hasDocuments:
           count: 1
 
-  - it: порт webdav появляется только при включённом webdav
+  - it: webdav port appears only when webdav is enabled
     set:
       seafile.webdav.enabled: true
     asserts:
@@ -28,16 +28,16 @@ tests:
           path: spec.ports
           count: 2
 
-  - it: селектор различает workload'ы чарта меткой component
+  - it: selector distinguishes the chart's workloads by component label
     asserts:
       - equal:
           path: spec.selector["app.kubernetes.io/component"]
           value: seafile
 
-  # Находка 5: targetPort должен быть именем порта контейнера ("http"), а
-  # не числом — kubeconform принимает любую строку/число как IntOrString,
-  # поэтому подмена ловится только явным ассертом на значение.
-  - it: targetPort ссылается на именованный порт контейнера, а не на число
+  # Finding 5: targetPort must be the container port's name ("http"), not
+  # a number — kubeconform accepts any string/number as IntOrString, so
+  # a regression is only caught by an explicit assert on the value.
+  - it: targetPort references the container's named port, not a number
     asserts:
       - equal:
           path: spec.ports[0].targetPort

@@ -7,21 +7,21 @@ release:
 set:
   seafile.serverHostname: seafile.example.com
 tests:
-  - it: предупреждает о пустом database.rootPassword, если нет existingSecret
+  - it: warns about empty database.rootPassword when there is no existingSecret
     set:
       database.rootPassword: ""
     asserts:
       - matchRegexRaw:
           pattern: "WARNING: database.rootPassword is empty"
 
-  - it: предупреждает о пустом database.password, если нет existingSecret
+  - it: warns about empty database.password when there is no existingSecret
     set:
       database.password: ""
     asserts:
       - matchRegexRaw:
           pattern: "WARNING: database.password is empty"
 
-  - it: не предупреждает о пароле БД, если задан database.existingSecret
+  - it: does not warn about the database password when database.existingSecret is set
     set:
       database.existingSecret: my-db-secret
       database.rootPassword: ""
@@ -32,7 +32,7 @@ tests:
       - notMatchRegexRaw:
           pattern: "database.password"
 
-  - it: предупреждает о пустом cache.password для встроенного redis без existingSecret
+  - it: warns about empty cache.password for the bundled redis without existingSecret
     set:
       cache.provider: redis
       cache.password: ""
@@ -40,7 +40,7 @@ tests:
       - matchRegexRaw:
           pattern: "WARNING: cache.password is empty"
 
-  - it: не предупреждает о cache.password при cache.existingSecret
+  - it: does not warn about cache.password when cache.existingSecret is set
     set:
       cache.existingSecret: my-cache-secret
       cache.password: ""
@@ -48,7 +48,7 @@ tests:
       - notMatchRegexRaw:
           pattern: "cache.password"
 
-  - it: не предупреждает о cache.password при provider memcached
+  - it: does not warn about cache.password when provider is memcached
     set:
       cache.provider: memcached
       cache.host: mc.example.com

@@ -1,11 +1,11 @@
-suite: метаданные чарта
+suite: chart metadata
 templates:
   - statefulset.yaml
   - secret.yaml
 release:
   name: t
 tests:
-  - it: appVersion попадает в метку версии
+  - it: appVersion flows into the version label
     template: statefulset.yaml
     set:
       seafile.serverHostname: seafile.example.com

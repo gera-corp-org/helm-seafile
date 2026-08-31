@@ -20,15 +20,16 @@
 .idea/
 *.tmproj
 .vscode/
-# Не нужно внутри пакета
+# Not needed inside the package
 .github/
 docs/
 scripts/
-# Без ведущего слэша шаблон "tests/" совпал бы с любым каталогом
-# tests на любой глубине, включая templates/tests/ — хук helm test,
-# который обязан попасть в пакет. Слэш якорит паттерн на корень чарта.
+# Without a leading slash, the "tests/" pattern would match any tests
+# directory at any depth, including templates/tests/ — the helm test
+# hook, which must ship in the package. The slash anchors the pattern
+# to the chart root.
 /tests/
 Chart.lock
-# ArtifactHub читает его из реестра как отдельный OCI-артефакт,
-# а не из содержимого чарта
+# ArtifactHub reads this from the registry as a separate OCI artifact,
+# not from the chart contents
 artifacthub-repo.yml

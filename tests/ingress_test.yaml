@@ -8,12 +8,12 @@ release:
 set:
   seafile.serverHostname: seafile.example.com
 tests:
-  - it: по умолчанию Ingress не создаётся
+  - it: Ingress is not created by default
     asserts:
       - hasDocuments:
           count: 0
 
-  - it: без tls.enabled секция tls отсутствует
+  - it: tls section is absent without tls.enabled
     template: ingress.yaml
     set:
       ingress.enabled: true
@@ -25,7 +25,7 @@ tests:
           path: spec.rules[0].host
           value: seafile.example.com
 
-  - it: tls берёт host из ingress.host и не рендерит map
+  - it: tls takes host from ingress.host and doesn't render a map
     template: ingress.yaml
     set:
       ingress.enabled: true
@@ -40,7 +40,7 @@ tests:
           path: spec.tls[0].secretName
           value: seafile-tls
 
-  - it: className становится полем, а не аннотацией
+  - it: className becomes a field, not an annotation
     template: ingress.yaml
     set:
       ingress.enabled: true
@@ -53,7 +53,7 @@ tests:
       - isNull:
           path: metadata.annotations["kubernetes.io/spec.ingressClassName"]
 
-  - it: без webdav путь seafdav отсутствует
+  - it: seafdav path is absent without webdav
     template: ingress.yaml
     set:
       ingress.enabled: true
@@ -63,7 +63,7 @@ tests:
           path: spec.rules[0].http.paths
           count: 1
 
-  - it: с webdav появляется второй путь на порт 8080
+  - it: webdav adds a second path on port 8080
     template: ingress.yaml
     set:
       ingress.enabled: true
@@ -80,7 +80,7 @@ tests:
           path: spec.rules[0].http.paths[1].backend.service.port.number
           value: 8080
 
-  - it: buffering создаёт Middleware и подключает её аннотацией
+  - it: buffering creates a Middleware and wires it via annotation
     template: ingress.yaml
     set:
       ingress.enabled: true
@@ -91,7 +91,7 @@ tests:
           path: metadata.annotations["traefik.ingress.kubernetes.io/router.middlewares"]
           value: seafile-t-seafile-buffering@kubernetescrd
 
-  - it: Middleware без buffering не создаётся
+  - it: Middleware is not created without buffering
     template: middleware.yaml
     set:
       ingress.enabled: true
@@ -100,7 +100,7 @@ tests:
       - hasDocuments:
           count: 0
 
-  - it: без пользовательских annotations дефолт proxy-body-size на месте ровно один раз
+  - it: default proxy-body-size is present exactly once without custom annotations
     template: ingress.yaml
     set:
       ingress.enabled: true
@@ -111,7 +111,7 @@ tests:
           value:
             nginx.ingress.kubernetes.io/proxy-body-size: "0"
 
-  - it: пользовательская annotations.proxy-body-size побеждает дефолт без дублирования ключа
+  - it: custom annotations.proxy-body-size overrides the default without duplicating the key
     template: ingress.yaml
     set:
       ingress.enabled: true
