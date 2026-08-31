@@ -9,13 +9,42 @@ release:
 set:
   seafile.serverHostname: seafile.example.com
 tests:
-  - it: при cache.enabled false ничего не создаётся
+  - it: при cache.enabled false StatefulSet не создаётся
+    template: redis/statefulset.yaml
     set:
       cache.enabled: false
       cache.host: redis.example.com
     asserts:
       - hasDocuments:
           count: 0
+
+  - it: при cache.enabled false Service не создаётся
+    template: redis/service.yaml
+    set:
+      cache.enabled: false
+      cache.host: redis.example.com
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  # Находка 1 (CRITICAL): при provider redis статефулсет seafile ссылается
+  # на redis-password безусловно от enabled. Секрет закрыт только
+  # existingSecret (и provider), иначе под с внешним Redis не стартует.
+  - it: при cache.enabled false секрет всё равно создаётся, потому что под seafile ссылается на него безусловно (provider redis)
+    template: redis/secret.yaml
+    set:
+      cache.enabled: false
+      cache.host: redis.example.com
+      cache.password: cachepass
+    asserts:
+      - hasDocuments:
+          count: 1
+      - equal:
+          path: metadata.name
+          value: t-seafile-redis
+      - equal:
+          path: data["redis-password"]
+          value: Y2FjaGVwYXNz
 
   - it: пароль не попадает в аргументы команды
     template: redis/statefulset.yaml

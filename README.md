@@ -56,8 +56,15 @@ helm install seafile oci://ghcr.io/gera-corp-org/helm-charts/seafile \
 | Secret | Условие создания | Ключи |
 |---|---|---|
 | `<fullname>` | `seafile.existingSecret` пуст | `admin-email`, `admin-password`, `jwt-private-key` |
-| `<fullname>-mariadb` | `database.enabled=true` и `database.existingSecret` пуст | `mariadb-root-password`, `mariadb-password` |
-| `<fullname>-redis` | `cache.enabled=true` и `cache.existingSecret` пуст | `redis-password` |
+| `<fullname>-mariadb` | `database.existingSecret` пуст | `mariadb-root-password`, `mariadb-password` |
+| `<fullname>-redis` | `cache.provider=redis` и `cache.existingSecret` пуст | `redis-password` |
+
+Секрет MariaDB создаётся независимо от `database.enabled`: под Seafile
+безусловно ссылается на оба ключа, в том числе при внешней БД (см.
+раздел «Внешние БД и кэш» ниже) — без этого секрета под не стартует.
+Секрет Redis создаётся только для `cache.provider=redis` (включая
+внешний Redis без встроенного StatefulSet-а); при `provider=memcached`
+он не нужен и не создаётся.
 
 `<fullname>` — имя релиза, либо `<release>-seafile`, если имя релиза
 не содержит `seafile` (см. `seafile.fullname` в `_helpers.tpl`).

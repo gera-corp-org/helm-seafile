@@ -9,13 +9,44 @@ release:
 set:
   seafile.serverHostname: seafile.example.com
 tests:
-  - it: при database.enabled false ничего не создаётся
+  - it: при database.enabled false StatefulSet не создаётся
+    template: mariadb/statefulset.yaml
     set:
       database.enabled: false
       database.host: db.example.com
     asserts:
       - hasDocuments:
           count: 0
+
+  - it: при database.enabled false Service не создаётся
+    template: mariadb/service.yaml
+    set:
+      database.enabled: false
+      database.host: db.example.com
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  # Находка 1 (CRITICAL): секрет нужен и для внешней БД — statefulset.yaml
+  # ссылается на него безусловно (mariadb-password, mariadb-root-password
+  # для INIT_SEAFILE_MYSQL_ROOT_PASSWORD). Секрет закрыт только
+  # existingSecret, а не enabled — иначе под с внешней БД не стартует.
+  - it: при database.enabled false секрет всё равно создаётся, потому что под seafile ссылается на него безусловно
+    template: mariadb/secret.yaml
+    set:
+      database.enabled: false
+      database.host: db.example.com
+      database.rootPassword: rootpass
+      database.password: dbpass
+    asserts:
+      - hasDocuments:
+          count: 1
+      - equal:
+          path: metadata.name
+          value: t-seafile-mariadb
+      - equal:
+          path: data["mariadb-password"]
+          value: ZGJwYXNz
 
   - it: образ mariadb запинен, а не latest
     template: mariadb/statefulset.yaml

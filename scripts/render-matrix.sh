@@ -20,6 +20,21 @@ run() {
   if grep -qE '^\s+(value|externalName): "[^"]*\.svc\.?"\s*$' <<<"$out"; then
     echo "FAIL [$name]: оборванный FQDN"; return 1
   fi
+  # Секреты, на которые под ссылается через secretKeyRef, обязаны реально
+  # существовать в выводе. kubeconform валидирует каждый документ отдельно
+  # и это не ловит — секрет чартовых компонентов (t-seafile[-mariadb|-redis])
+  # мог быть закрыт неверным условием и не отрендериться, а под всё равно
+  # ссылался бы на него. Имена, не совпадающие с этим шаблоном, — сторонний
+  # existingSecret, который в выводе намеренно отсутствует.
+  local declared referenced ref
+  declared=$(awk '/^kind: Secret$/{f=1} f && /^  name: /{print $2; f=0}' <<<"$out" | sort -u)
+  referenced=$(awk '/secretKeyRef:/{f=1; next} f && /name: /{print $2; f=0}' <<<"$out" | sort -u)
+  while IFS= read -r ref; do
+    [ -z "$ref" ] && continue
+    if [[ "$ref" =~ ^t-seafile(-mariadb|-redis)?$ ]] && ! grep -qxF "$ref" <<<"$declared"; then
+      echo "FAIL [$name]: под ссылается на секрет $ref, которого нет в выводе"; return 1
+    fi
+  done <<<"$referenced"
   if ! docker run --rm -i ghcr.io/yannh/kubeconform:latest-alpine \
         -strict -ignore-missing-schemas -summary <<<"$out"; then
     echo "FAIL kubeconform [$name]"; return 1
@@ -39,6 +54,8 @@ run "annotation-override" --set ingress.enabled=true --set ingress.host=seafile.
                           --set 'ingress.annotations.nginx\.ingress\.kubernetes\.io/proxy-body-size=64m'
 run "external-db"    --set database.enabled=false --set database.host=db.example.com
 run "external-cache" --set cache.enabled=false --set cache.host=redis.example.com
+run "external-db+cache" --set database.enabled=false --set database.host=db.example.com \
+                        --set cache.enabled=false --set cache.host=redis.example.com
 run "existing-secrets" --set seafile.existingSecret=s --set database.existingSecret=d \
                        --set cache.existingSecret=c
 run "paused"         --set replicaCount=0
