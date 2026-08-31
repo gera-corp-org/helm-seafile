@@ -25,6 +25,28 @@ Seafile {{ .Chart.AppVersion }} установлен как релиз {{ .Relea
 {{- end }}
 {{- end }}
 
+{{- if not .Values.database.existingSecret }}
+{{- if not .Values.database.rootPassword }}
+
+  ВНИМАНИЕ: database.rootPassword пуст. MariaDB не запустится с пустым
+  root-паролем (CrashLoopBackOff), а без него Seafile не сможет создать
+  свои базы через INIT_SEAFILE_MYSQL_ROOT_PASSWORD.
+{{- end }}
+{{- if not .Values.database.password }}
+
+  ВНИМАНИЕ: database.password пуст — Seafile не сможет подключиться
+  к базе данных пользователем {{ .Values.database.user }}.
+{{- end }}
+{{- end }}
+
+{{- if and (eq .Values.cache.provider "redis") (not .Values.cache.existingSecret) }}
+{{- if not .Values.cache.password }}
+
+  ВНИМАНИЕ: cache.password пуст — встроенный Redis запустится без пароля
+  автоматически (--requirepass ""), но это следует задать явно.
+{{- end }}
+{{- end }}
+
   Первый запуск инициализирует базы и занимает несколько минут.
   Прогресс:
 
