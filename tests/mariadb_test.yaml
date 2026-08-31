@@ -9,7 +9,7 @@ release:
 set:
   seafile.serverHostname: seafile.example.com
 tests:
-  - it: при database.enabled false StatefulSet не создаётся
+  - it: StatefulSet is not created when database.enabled is false
     template: mariadb/statefulset.yaml
     set:
       database.enabled: false
@@ -18,7 +18,7 @@ tests:
       - hasDocuments:
           count: 0
 
-  - it: при database.enabled false Service не создаётся
+  - it: Service is not created when database.enabled is false
     template: mariadb/service.yaml
     set:
       database.enabled: false
@@ -27,11 +27,12 @@ tests:
       - hasDocuments:
           count: 0
 
-  # Находка 1 (CRITICAL): секрет нужен и для внешней БД — statefulset.yaml
-  # ссылается на него безусловно (mariadb-password, mariadb-root-password
-  # для INIT_SEAFILE_MYSQL_ROOT_PASSWORD). Секрет закрыт только
-  # existingSecret, а не enabled — иначе под с внешней БД не стартует.
-  - it: при database.enabled false секрет всё равно создаётся, потому что под seafile ссылается на него безусловно
+  # Finding 1 (CRITICAL): the secret is needed for an external database
+  # too — statefulset.yaml references it unconditionally (mariadb-password,
+  # mariadb-root-password for INIT_SEAFILE_MYSQL_ROOT_PASSWORD). The secret
+  # is gated only by existingSecret, not by enabled — otherwise the pod
+  # with an external database would fail to start.
+  - it: secret is still created when database.enabled is false, because the seafile pod references it unconditionally
     template: mariadb/secret.yaml
     set:
       database.enabled: false
@@ -48,14 +49,14 @@ tests:
           path: data["mariadb-password"]
           value: ZGJwYXNz
 
-  - it: образ mariadb запинен, а не latest
+  - it: mariadb image is pinned, not latest
     template: mariadb/statefulset.yaml
     asserts:
       - equal:
           path: spec.template.spec.containers[0].image
           value: docker.io/mariadb:11.4
 
-  - it: root-пароль приходит из секрета
+  - it: root password comes from the secret
     template: mariadb/statefulset.yaml
     set:
       database.rootPassword: rootpass
@@ -69,14 +70,14 @@ tests:
                 name: t-seafile-mariadb
                 key: mariadb-root-password
 
-  - it: сервис слушает 3306
+  - it: service listens on 3306
     template: mariadb/service.yaml
     asserts:
       - equal:
           path: spec.ports[0].port
           value: 3306
 
-  - it: при existingSecret секрет не создаётся
+  - it: secret is not created when existingSecret is set
     template: mariadb/secret.yaml
     set:
       database.existingSecret: my-db-secret
@@ -84,10 +85,10 @@ tests:
       - hasDocuments:
           count: 0
 
-  # Находка 4: метка component различает Service/StatefulSet mariadb от
-  # redis и seafile — без неё Service начинает раскидывать 3306 по всем
-  # подам релиза.
-  - it: StatefulSet несёт метку component=mariadb и в selector, и в шаблоне пода
+  # Finding 4: the component label distinguishes the mariadb Service/
+  # StatefulSet from redis and seafile — without it, the Service starts
+  # spraying 3306 across every pod in the release.
+  - it: StatefulSet carries component=mariadb label in both selector and pod template
     template: mariadb/statefulset.yaml
     asserts:
       - equal:
@@ -97,24 +98,24 @@ tests:
           path: spec.template.metadata.labels["app.kubernetes.io/component"]
           value: mariadb
 
-  - it: Service селектит поды по component=mariadb
+  - it: Service selects pods by component=mariadb
     template: mariadb/service.yaml
     asserts:
       - equal:
           path: spec.selector["app.kubernetes.io/component"]
           value: mariadb
 
-  # Находка 6: метка component есть и в metadata, не только в selector —
-  # иначе kubectl get -l app.kubernetes.io/component=mariadb не находит
-  # Service/Secret.
-  - it: Service несёт метку component в metadata.labels
+  # Finding 6: the component label is on metadata too, not only in the
+  # selector — otherwise kubectl get -l app.kubernetes.io/component=mariadb
+  # won't find the Service/Secret.
+  - it: Service carries component label in metadata.labels
     template: mariadb/service.yaml
     asserts:
       - equal:
           path: metadata.labels["app.kubernetes.io/component"]
           value: mariadb
 
-  - it: Secret несёт метку component в metadata.labels
+  - it: Secret carries component label in metadata.labels
     template: mariadb/secret.yaml
     asserts:
       - equal:

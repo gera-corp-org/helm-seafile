@@ -1,7 +1,7 @@
 name: chart
 
-# Публикует чарт OCI-артефактом в GHCR. Artifact Hub индексирует его
-# прямо оттуда — без ветки gh-pages и index.yaml.
+# Publishes the chart as an OCI artifact to GHCR. Artifact Hub indexes it
+# straight from there — no gh-pages branch or index.yaml needed.
 
 on:
   push:
@@ -11,10 +11,10 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  # Публикующая организация зафиксирована явно, а не через
-  # github.repository_owner: личный аккаунт gera-corp — другая
-  # сущность, и адрес, за которым следит ArtifactHub, не должен
-  # зависеть от того, откуда запущен workflow (форк, перенос репо).
+  # The publishing organization is pinned explicitly rather than via
+  # github.repository_owner: the personal gera-corp account is a
+  # different entity, and the address ArtifactHub tracks must not
+  # depend on where the workflow happens to run (a fork, a repo move).
   ORG: gera-corp-org
 
 jobs:
@@ -29,7 +29,7 @@ jobs:
 
       - uses: azure/setup-helm@v5
 
-      # не стоит на раннере по умолчанию, а без него не запушить метаданные
+      # not preinstalled on the runner, but needed to push the metadata
       - uses: oras-project/setup-oras@v2
 
       - name: Lint
@@ -39,22 +39,22 @@ jobs:
           helm unittest .
 
       - name: Render every branch of the templates
-        # Тот самый шаг, отсутствие которого пропустило secretName: map[]
-        # в опубликованный чарт.
+        # This is the exact step whose absence once let secretName: map[]
+        # slip into a published chart.
         run: ./scripts/render-matrix.sh
 
       - name: Check the tag and the chart agree
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
-          # Тег v0.1.6 однажды опубликовал чарт 0.1.5. Больше нет.
+          # Tag v0.1.6 once published chart 0.1.5. Never again.
           want="${GITHUB_REF_NAME#v}"
           got=$(helm show chart . | awk '/^version:/ {print $2}' | tr -d '"')
           if [ "$want" != "$got" ]; then
-            echo "::error::тег $GITHUB_REF_NAME не совпадает с version: $got в Chart.yaml"
+            echo "::error::tag $GITHUB_REF_NAME does not match version: $got in Chart.yaml"
             exit 1
           fi
 
-      # pull request только проверяет, никогда не публикует
+      # A pull request only validates, it never publishes
       - name: Log in to ${{ env.REGISTRY }}
         if: github.event_name != 'pull_request'
         uses: docker/login-action@v4
@@ -71,13 +71,13 @@ jobs:
           helm push "/tmp/seafile-${version}.tgz" \
             "oci://${{ env.REGISTRY }}/${{ env.ORG }}/helm-charts"
 
-      # Также на ручном запуске: заявка о владении не зависит от версии
-      # чарта, и её исправление не должно требовать лишнего релиза.
+      # Also on manual dispatch: the ownership claim is independent of the
+      # chart version, and fixing it shouldn't require an extra release.
       - name: Push the Artifact Hub ownership metadata
         if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
         run: |
-          # Artifact Hub ищет этот артефакт рядом с чартом в реестре.
-          # Именно его отсутствие держало verified_publisher: false.
+          # Artifact Hub looks for this artifact next to the chart in the
+          # registry. Its absence is exactly what kept verified_publisher: false.
           oras push \
             "${{ env.REGISTRY }}/${{ env.ORG }}/helm-charts/seafile:artifacthub.io" \
             --config /dev/null:application/vnd.cncf.artifacthub.config.v1+yaml \

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Рендерит чарт во всех значимых конфигурациях и валидирует результат.
-# Каждая комбинация — ветка шаблонов, в которой раньше находили баги.
+# Renders the chart in every significant configuration and validates the
+# output. Each combination is a template branch where bugs were found before.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -12,27 +12,27 @@ run() {
   if ! out=$(helm template t . "${BASE[@]}" "$@" 2>&1); then
     echo "FAIL render [$name]"; echo "$out"; return 1
   fi
-  # Признак того, что map попал в манифест как значение скаляра.
+  # Sign that a map ended up in the manifest as a scalar value.
   if grep -q 'map\[' <<<"$out"; then
-    echo "FAIL [$name]: в манифесте есть map["; return 1
+    echo "FAIL [$name]: manifest contains map["; return 1
   fi
-  # FQDN с точкой на конце — след необъявленного clusterDomain.
+  # FQDN ending in a dot — trace of an undeclared clusterDomain.
   if grep -qE '^\s+(value|externalName): "[^"]*\.svc\.?"\s*$' <<<"$out"; then
-    echo "FAIL [$name]: оборванный FQDN"; return 1
+    echo "FAIL [$name]: truncated FQDN"; return 1
   fi
-  # Секреты, на которые под ссылается через secretKeyRef, обязаны реально
-  # существовать в выводе. kubeconform валидирует каждый документ отдельно
-  # и это не ловит — секрет чартовых компонентов (t-seafile[-mariadb|-redis])
-  # мог быть закрыт неверным условием и не отрендериться, а под всё равно
-  # ссылался бы на него. Имена, не совпадающие с этим шаблоном, — сторонний
-  # existingSecret, который в выводе намеренно отсутствует.
+  # Any secret the pod references via secretKeyRef must actually exist in
+  # the output. kubeconform validates each document in isolation and won't
+  # catch this — a chart-component secret (t-seafile[-mariadb|-redis]) could
+  # be gated behind a wrong condition and fail to render, while the pod
+  # would still reference it. Names that don't match this pattern are a
+  # third-party existingSecret, deliberately absent from the output.
   local declared referenced ref
   declared=$(awk '/^kind: Secret$/{f=1} f && /^  name: /{print $2; f=0}' <<<"$out" | sort -u)
   referenced=$(awk '/secretKeyRef:/{f=1; next} f && /name: /{print $2; f=0}' <<<"$out" | sort -u)
   while IFS= read -r ref; do
     [ -z "$ref" ] && continue
     if [[ "$ref" =~ ^t-seafile(-mariadb|-redis)?$ ]] && ! grep -qxF "$ref" <<<"$declared"; then
-      echo "FAIL [$name]: под ссылается на секрет $ref, которого нет в выводе"; return 1
+      echo "FAIL [$name]: pod references secret $ref, which is missing from the output"; return 1
     fi
   done <<<"$referenced"
   if ! docker run --rm -i ghcr.io/yannh/kubeconform:latest-alpine \
@@ -61,4 +61,4 @@ run "existing-secrets" --set seafile.existingSecret=s --set database.existingSec
                        --set cache.existingSecret=c
 run "paused"         --set replicaCount=0
 
-echo "все конфигурации прошли"
+echo "all configurations passed"

@@ -6,7 +6,7 @@ release:
   name: t
   namespace: seafile
 tests:
-  - it: database.host по умолчанию указывает на встроенный сервис с clusterDomain
+  - it: database.host defaults to the bundled service with clusterDomain
     template: statefulset.yaml
     set:
       seafile.serverHostname: seafile.example.com
@@ -18,7 +18,7 @@ tests:
             name: SEAFILE_MYSQL_DB_HOST
             value: t-seafile-mariadb.seafile.svc.cluster.local
 
-  - it: FQDN никогда не оканчивается точкой
+  - it: FQDN never ends with a dot
     template: statefulset.yaml
     set:
       seafile.serverHostname: seafile.example.com
@@ -27,7 +27,7 @@ tests:
           path: spec.template.spec.containers[0].env[?(@.name=="SEAFILE_MYSQL_DB_HOST")].value
           pattern: '\.$'
 
-  - it: внешняя БД без host падает с внятной ошибкой
+  - it: external database without host fails with a clear error
     template: statefulset.yaml
     set:
       seafile.serverHostname: seafile.example.com
@@ -37,10 +37,11 @@ tests:
       - failedTemplate:
           errorMessage: "database.host is required when database.enabled is false"
 
-  # Находка 5: явный database.host обязан побеждать встроенный FQDN даже
-  # когда database.enabled true — иначе миграция на управляемую БД без
-  # явного отключения enabled молча продолжит стучаться во встроенный сервис.
-  - it: явный database.host побеждает встроенный сервис даже при database.enabled true
+  # Finding 5: an explicit database.host must win over the bundled FQDN
+  # even when database.enabled is true — otherwise migrating to a managed
+  # database without also flipping enabled off silently keeps hitting the
+  # bundled service.
+  - it: explicit database.host wins over the bundled service even when database.enabled is true
     template: statefulset.yaml
     set:
       seafile.serverHostname: seafile.example.com
@@ -53,7 +54,7 @@ tests:
             name: SEAFILE_MYSQL_DB_HOST
             value: managed-db.example.com
 
-  - it: явный cache.host побеждает встроенный сервис даже при cache.enabled true
+  - it: explicit cache.host wins over the bundled service even when cache.enabled is true
     template: statefulset.yaml
     set:
       seafile.serverHostname: seafile.example.com

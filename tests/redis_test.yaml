@@ -9,7 +9,7 @@ release:
 set:
   seafile.serverHostname: seafile.example.com
 tests:
-  - it: при cache.enabled false StatefulSet не создаётся
+  - it: StatefulSet is not created when cache.enabled is false
     template: redis/statefulset.yaml
     set:
       cache.enabled: false
@@ -18,7 +18,7 @@ tests:
       - hasDocuments:
           count: 0
 
-  - it: при cache.enabled false Service не создаётся
+  - it: Service is not created when cache.enabled is false
     template: redis/service.yaml
     set:
       cache.enabled: false
@@ -27,10 +27,11 @@ tests:
       - hasDocuments:
           count: 0
 
-  # Находка 1 (CRITICAL): при provider redis статефулсет seafile ссылается
-  # на redis-password безусловно от enabled. Секрет закрыт только
-  # existingSecret (и provider), иначе под с внешним Redis не стартует.
-  - it: при cache.enabled false секрет всё равно создаётся, потому что под seafile ссылается на него безусловно (provider redis)
+  # Finding 1 (CRITICAL): with provider redis, the seafile statefulset
+  # references redis-password unconditionally on enabled. The secret is
+  # gated only by existingSecret (and provider), otherwise the pod with
+  # an external Redis would fail to start.
+  - it: secret is still created when cache.enabled is false, because the seafile pod references it unconditionally (provider redis)
     template: redis/secret.yaml
     set:
       cache.enabled: false
@@ -46,10 +47,10 @@ tests:
           path: data["redis-password"]
           value: Y2FjaGVwYXNz
 
-  # Находка 2: provider memcached не должен разворачивать Redis — иначе
-  # Seafile получает MEMCACHED_HOST/PORT, указывающие на Redis-сервер,
-  # который говорит по чужому протоколу.
-  - it: при provider memcached StatefulSet Redis не создаётся, даже если cache.enabled true
+  # Finding 2: provider memcached must not deploy Redis — otherwise
+  # Seafile gets MEMCACHED_HOST/PORT pointing at a Redis server that
+  # speaks the wrong protocol.
+  - it: Redis StatefulSet is not created with provider memcached, even when cache.enabled is true
     template: redis/statefulset.yaml
     set:
       cache.provider: memcached
@@ -59,7 +60,7 @@ tests:
       - hasDocuments:
           count: 0
 
-  - it: при provider memcached Service Redis не создаётся, даже если cache.enabled true
+  - it: Redis Service is not created with provider memcached, even when cache.enabled is true
     template: redis/service.yaml
     set:
       cache.provider: memcached
@@ -69,7 +70,7 @@ tests:
       - hasDocuments:
           count: 0
 
-  - it: при provider memcached Secret Redis не создаётся, даже если cache.enabled true
+  - it: Redis Secret is not created with provider memcached, even when cache.enabled is true
     template: redis/secret.yaml
     set:
       cache.provider: memcached
@@ -79,7 +80,7 @@ tests:
       - hasDocuments:
           count: 0
 
-  - it: пароль не попадает в аргументы команды
+  - it: password does not end up in the command args
     template: redis/statefulset.yaml
     set:
       cache.password: redispass
@@ -88,7 +89,7 @@ tests:
           path: spec.template.spec.containers[0].args
           content: redispass
 
-  - it: пароль приходит из секрета через переменную окружения
+  - it: password comes from the secret via an environment variable
     template: redis/statefulset.yaml
     asserts:
       - contains:
@@ -100,29 +101,29 @@ tests:
                 name: t-seafile-redis
                 key: redis-password
 
-  - it: command не переопределяется (чтобы entrypoint работал)
+  - it: command is not overridden (so the entrypoint keeps working)
     template: redis/statefulset.yaml
     asserts:
       - notExists:
           path: spec.template.spec.containers[0].command
 
-  - it: пароль передаётся через переменную в args, не раскрытым
+  - it: password is passed via a variable in args, not exposed directly
     template: redis/statefulset.yaml
     asserts:
       - contains:
           path: spec.template.spec.containers[0].args
           content: "$(REDIS_PASSWORD)"
 
-  - it: сервис слушает 6379
+  - it: service listens on 6379
     template: redis/service.yaml
     asserts:
       - equal:
           path: spec.ports[0].port
           value: 6379
 
-  # Находка 4: метка component различает Service/StatefulSet redis от
-  # mariadb и seafile.
-  - it: StatefulSet несёт метку component=redis и в selector, и в шаблоне пода
+  # Finding 4: the component label distinguishes the redis Service/
+  # StatefulSet from mariadb and seafile.
+  - it: StatefulSet carries component=redis label in both selector and pod template
     template: redis/statefulset.yaml
     asserts:
       - equal:
@@ -132,22 +133,23 @@ tests:
           path: spec.template.metadata.labels["app.kubernetes.io/component"]
           value: redis
 
-  - it: Service селектит поды по component=redis
+  - it: Service selects pods by component=redis
     template: redis/service.yaml
     asserts:
       - equal:
           path: spec.selector["app.kubernetes.io/component"]
           value: redis
 
-  # Находка 6: метка component есть и в metadata, не только в selector.
-  - it: Service несёт метку component в metadata.labels
+  # Finding 6: the component label is on metadata too, not only in the
+  # selector.
+  - it: Service carries component label in metadata.labels
     template: redis/service.yaml
     asserts:
       - equal:
           path: metadata.labels["app.kubernetes.io/component"]
           value: redis
 
-  - it: Secret несёт метку component в metadata.labels
+  - it: Secret carries component label in metadata.labels
     template: redis/secret.yaml
     asserts:
       - equal:
