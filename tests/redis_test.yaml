@@ -155,3 +155,31 @@ tests:
       - equal:
           path: metadata.labels["app.kubernetes.io/component"]
           value: redis
+
+  - it: no securityContext by default
+    template: redis/statefulset.yaml
+    asserts:
+      - isNull:
+          path: spec.template.spec.securityContext
+      - isNull:
+          path: spec.template.spec.containers[0].securityContext
+
+  - it: podSecurityContext and securityContext are passed through
+    template: redis/statefulset.yaml
+    set:
+      cache.podSecurityContext:
+        runAsNonRoot: true
+      cache.securityContext:
+        runAsUser: 999
+        capabilities:
+          drop: [ALL]
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext.runAsNonRoot
+          value: true
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.runAsUser
+          value: 999
+      - contains:
+          path: spec.template.spec.containers[0].securityContext.capabilities.drop
+          content: ALL

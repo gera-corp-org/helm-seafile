@@ -170,6 +170,71 @@ Secret entirely.
 | `nodeSelector`, `tolerations`, `affinity` | Pod scheduling | `{}` / `[]` / `{}` |
 | `startupProbe`, `livenessProbe`, `readinessProbe` | Seafile container probes (`/api2/ping/`) | see `values.yaml` |
 
+## Running with a restricted security context
+
+`podSecurityContext` and `securityContext` are exposed separately for each
+of the three workloads — the top-level pair for Seafile,
+`database.*` for MariaDB and `cache.*` for Redis. Nothing is set by
+default.
+
+**MariaDB and Redis run as non-root.** Both official images ship a user
+with uid 999, so the full restricted profile works:
+
+```yaml
+database:
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 999
+    runAsGroup: 999
+    fsGroup: 999
+    seccompProfile: {type: RuntimeDefault}
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities: {drop: [ALL]}
+
+cache:
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 999
+    runAsGroup: 1000        # the redis user's group is 1000, not 999
+    seccompProfile: {type: RuntimeDefault}
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities: {drop: [ALL]}
+```
+
+Verified on a cluster: both end up with uid 999 and an empty capability
+set.
+
+**Seafile cannot run as non-root.** Its image is built on phusion
+baseimage, whose `my_init` reads `/etc/container_environment` at startup —
+a directory that is `drwx------ root root` inside the image. Under
+`runAsNonRoot` the container dies immediately with
+`PermissionError: [Errno 13] Permission denied`. This is baked into the
+image and no chart setting can work around it. The `NON_ROOT` environment
+variable Seafile documents is not a substitute: it only drops the seahub
+and seafile processes with `su`, leaves the init as root, and does a
+recursive `chmod a+rwx` on the data volume along the way.
+
+What Seafile does tolerate is losing the capabilities it never uses:
+
+```yaml
+podSecurityContext:
+  seccompProfile: {type: RuntimeDefault}
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop: [ALL]
+    add: [NET_BIND_SERVICE, CHOWN, SETUID, SETGID, DAC_OVERRIDE, FOWNER]
+```
+
+That takes it from fourteen capabilities to six, keeping only what the
+init actually needs: binding port 80, fixing ownership under `/shared`,
+dropping privileges for its children, and reading its own root-only
+directories. It still runs as uid 0, so a namespace that enforces the
+`restricted` Pod Security Standard will reject it — `baseline` is the
+best it can do.
+
 ## Adopting a volume from another chart
 
 The official MariaDB image keeps its data directly in `/var/lib/mysql`,

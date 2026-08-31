@@ -60,6 +60,10 @@ run "memcached"      --set cache.provider=memcached --set cache.host=mc.example.
 run "existing-secrets" --set seafile.existingSecret=s --set database.existingSecret=d \
                        --set cache.existingSecret=c
 run "db-subpath"       --set database.persistence.subPath=data
+run "hardened"        --set-json 'database.podSecurityContext={"runAsNonRoot":true,"fsGroup":999}' \
+                      --set-json 'database.securityContext={"runAsUser":999,"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]}}' \
+                      --set-json 'cache.podSecurityContext={"runAsNonRoot":true,"fsGroup":999}' \
+                      --set-json 'cache.securityContext={"runAsUser":999,"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]}}'
 run "paused"         --set replicaCount=0
 
 echo "all configurations passed"

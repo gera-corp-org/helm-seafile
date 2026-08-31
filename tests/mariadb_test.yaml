@@ -139,3 +139,31 @@ tests:
       - equal:
           path: spec.template.spec.containers[0].volumeMounts[0].subPath
           value: data
+
+  - it: no securityContext by default
+    template: mariadb/statefulset.yaml
+    asserts:
+      - isNull:
+          path: spec.template.spec.securityContext
+      - isNull:
+          path: spec.template.spec.containers[0].securityContext
+
+  - it: podSecurityContext and securityContext are passed through
+    template: mariadb/statefulset.yaml
+    set:
+      database.podSecurityContext:
+        runAsNonRoot: true
+        fsGroup: 999
+      database.securityContext:
+        runAsUser: 999
+        allowPrivilegeEscalation: false
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext.fsGroup
+          value: 999
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.runAsUser
+          value: 999
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.allowPrivilegeEscalation
+          value: false

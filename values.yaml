@@ -67,6 +67,12 @@ database:
     # and mounting the volume root at /var/lib/mysql makes the official
     # image treat it as empty and initialize a fresh database beside it.
     subPath: ""
+  # The official MariaDB image starts as root and drops to the mysql user
+  # itself, so runAsNonRoot needs an explicit runAsUser/runAsGroup of 999
+  # plus fsGroup 999 on the pod, or the server cannot write its data
+  # directory.
+  podSecurityContext: {}
+  securityContext: {}
   resources: {}
 
 cache:
@@ -83,6 +89,10 @@ cache:
     repository: docker.io/redis
     tag: "8-alpine"
     pullPolicy: IfNotPresent
+  # Same shape as database.*: the official Redis image drops to the redis
+  # user through its entrypoint, so running as non-root needs runAsUser 999.
+  podSecurityContext: {}
+  securityContext: {}
   resources: {}
 
 persistence:

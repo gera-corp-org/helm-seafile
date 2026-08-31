@@ -32,10 +32,16 @@ spec:
       - name: data
         emptyDir: {}
       {{- end }}
+      {{- with .Values.database.podSecurityContext }}
+      securityContext: {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
       - name: mariadb
         image: "{{ .Values.database.image.repository }}:{{ .Values.database.image.tag }}"
         imagePullPolicy: {{ .Values.database.image.pullPolicy }}
+        {{- with .Values.database.securityContext }}
+        securityContext: {{- toYaml . | nindent 10 }}
+        {{- end }}
         env:
         - name: MARIADB_ROOT_PASSWORD
           valueFrom:
