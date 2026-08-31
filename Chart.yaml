@@ -1,7 +1,7 @@
 apiVersion: v2
 name: seafile
 type: application
-version: 0.3.1
+version: 0.3.2
 appVersion: "13.0.25"
 icon: https://www.seafile.com/media/img/seafile-logo.png
 home: https://github.com/gera-corp-org/helm-seafile
@@ -19,6 +19,8 @@ maintainers:
 kubeVersion: ">=1.19.0-0"
 annotations:
   artifacthub.io/changes: |
+    - kind: fixed
+      description: "0.3.1 published without a provenance file despite announcing signatures — signing was conditional and the condition silently saw an empty secret. Signing is now unconditional and the published chart is pulled back from the registry and verified before the job succeeds"
     - kind: added
       description: "Charts are signed: every release now carries a provenance file, verifiable with the public key in KEY.gpg"
     - kind: added
