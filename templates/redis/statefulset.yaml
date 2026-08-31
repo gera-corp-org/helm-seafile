@@ -1,4 +1,4 @@
-{{- if .Values.cache.enabled }}
+{{- if and .Values.cache.enabled (eq .Values.cache.provider "redis") }}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:

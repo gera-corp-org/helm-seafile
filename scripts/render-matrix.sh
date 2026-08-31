@@ -56,6 +56,7 @@ run "external-db"    --set database.enabled=false --set database.host=db.example
 run "external-cache" --set cache.enabled=false --set cache.host=redis.example.com
 run "external-db+cache" --set database.enabled=false --set database.host=db.example.com \
                         --set cache.enabled=false --set cache.host=redis.example.com
+run "memcached"      --set cache.provider=memcached --set cache.host=mc.example.com
 run "existing-secrets" --set seafile.existingSecret=s --set database.existingSecret=d \
                        --set cache.existingSecret=c
 run "paused"         --set replicaCount=0

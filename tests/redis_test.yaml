@@ -46,6 +46,39 @@ tests:
           path: data["redis-password"]
           value: Y2FjaGVwYXNz
 
+  # Находка 2: provider memcached не должен разворачивать Redis — иначе
+  # Seafile получает MEMCACHED_HOST/PORT, указывающие на Redis-сервер,
+  # который говорит по чужому протоколу.
+  - it: при provider memcached StatefulSet Redis не создаётся, даже если cache.enabled true
+    template: redis/statefulset.yaml
+    set:
+      cache.provider: memcached
+      cache.enabled: true
+      cache.host: mc.example.com
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: при provider memcached Service Redis не создаётся, даже если cache.enabled true
+    template: redis/service.yaml
+    set:
+      cache.provider: memcached
+      cache.enabled: true
+      cache.host: mc.example.com
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: при provider memcached Secret Redis не создаётся, даже если cache.enabled true
+    template: redis/secret.yaml
+    set:
+      cache.provider: memcached
+      cache.enabled: true
+      cache.host: mc.example.com
+    asserts:
+      - hasDocuments:
+          count: 0
+
   - it: пароль не попадает в аргументы команды
     template: redis/statefulset.yaml
     set:
