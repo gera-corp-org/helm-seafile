@@ -34,7 +34,11 @@ jobs:
 
       - name: Lint
         run: |
-          helm plugin install https://github.com/helm-unittest/helm-unittest --version v1.1.2
+          # --verify=false is required from Helm 3.19 on: plugins installed
+          # straight from a git URL carry no provenance for Helm to check,
+          # and without the flag the install aborts.
+          helm plugin install https://github.com/helm-unittest/helm-unittest \
+            --version v1.1.2 --verify=false
           helm lint . --strict --set seafile.serverHostname=seafile.example.com
           helm unittest .
 
