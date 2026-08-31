@@ -70,7 +70,7 @@ spec:
           value: {{ .Values.seafile.protocol | quote }}
         - name: SEAFILE_SERVER_LETSENCRYPT
           value: "false"
-        # Раньше было прибито к "true" независимо от протокола.
+        # Used to be hardcoded to "true" regardless of the protocol.
         - name: FORCE_HTTPS_IN_CONF
           value: {{ eq .Values.seafile.protocol "https" | quote }}
         - name: SEAFILE_LOG_TO_STDOUT

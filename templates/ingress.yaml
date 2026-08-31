@@ -4,9 +4,9 @@ kind: Ingress
 metadata:
   name: {{ include "seafile.fullname" . }}
   labels: {{- include "seafile.labels" . | nindent 4 }}
-  # Снимает ограничение на размер тела запроса: Seafile грузит
-  # файлы произвольного размера. Пользовательские ingress.annotations
-  # побеждают эти дефолты — merge(dst, src) даёт приоритет dst.
+  # Lifts the request body size limit: Seafile uploads files of
+  # arbitrary size. User-supplied ingress.annotations win over these
+  # defaults — merge(dst, src) gives priority to dst.
   # https://github.com/kubernetes/ingress-nginx/blob/main/docs/user-guide/nginx-configuration/annotations.md#custom-max-body-size
   {{- $annotations := dict "nginx.ingress.kubernetes.io/proxy-body-size" "0" }}
   {{- if .Values.ingress.traefik.buffering }}

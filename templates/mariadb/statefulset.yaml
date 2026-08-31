@@ -42,8 +42,8 @@ spec:
             secretKeyRef:
               name: {{ include "seafile.database.secretName" . }}
               key: mariadb-root-password
-        # Базы и пользователя создаёт сам Seafile под root, поэтому
-        # MARIADB_DATABASE и MARIADB_USER здесь не задаются.
+        # Seafile itself creates the databases and user as root, so
+        # MARIADB_DATABASE and MARIADB_USER aren't set here.
         - name: MARIADB_AUTO_UPGRADE
           value: "1"
         - name: MYSQL_LOG_CONSOLE

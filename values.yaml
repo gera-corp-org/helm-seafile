@@ -1,24 +1,24 @@
-# Значения по умолчанию для чарта seafile.
+# Default values for the seafile chart.
 
-# Домен кластера. Использовался в шаблонах, но не был объявлен,
-# из-за чего FQDN рендерился с точкой на конце.
+# Cluster domain. Used in templates but was never declared,
+# which caused the FQDN to render with a trailing dot.
 clusterDomain: cluster.local
 
 nameOverride: ""
 fullnameOverride: ""
 
-# 0 останавливает Seafile, не удаляя релиз и данные.
+# 0 stops Seafile without deleting the release or its data.
 replicaCount: 1
 
 image:
   repository: docker.io/seafileltd/seafile-mc
-  # Пусто — берётся appVersion чарта.
+  # Empty — falls back to the chart's appVersion.
   tag: ""
   pullPolicy: IfNotPresent
 imagePullSecrets: []
 
 seafile:
-  # Обязателен: без него Seafile генерирует нерабочие ссылки.
+  # Required: without it Seafile generates broken links.
   serverHostname: ""
   protocol: https
   timeZone: Etc/UTC
@@ -30,23 +30,23 @@ seafile:
   jwtPrivateKey: ""
   webdav:
     enabled: false
-  # Секрет с ключами admin-email, admin-password, jwt-private-key.
-  # Задан — чарт свой секрет не создаёт.
+  # Secret with the admin-email, admin-password, jwt-private-key keys.
+  # If set, the chart won't create its own Secret.
   existingSecret: ""
-  # Сырой список env. Добавляется последним, поэтому переопределяет
-  # всё вышестоящее. Сюда кладутся vault: ссылки для bank-vaults.
+  # Raw env list. Appended last, so it overrides everything above.
+  # This is where vault: references for bank-vaults go.
   extraEnv: []
   extraEnvFrom: []
 
 database:
-  # false — использовать внешнюю БД, тогда host обязателен.
+  # false — use an external database; host is then required.
   enabled: true
   host: ""
   port: 3306
   user: seafile
   password: ""
   rootPassword: ""
-  # Секрет с ключами mariadb-root-password и mariadb-password.
+  # Secret with the mariadb-root-password and mariadb-password keys.
   existingSecret: ""
   names:
     ccnet: ccnet_db
@@ -64,14 +64,14 @@ database:
   resources: {}
 
 cache:
-  # Пробрасывается в CACHE_PROVIDER. Встроен только redis; внешний
-  # memcached задаётся provider: memcached вместе с host.
+  # Passed through to CACHE_PROVIDER. Only redis is built in; external
+  # memcached is configured with provider: memcached together with host.
   provider: redis
   enabled: true
   host: ""
   port: 6379
   password: ""
-  # Секрет с ключом redis-password.
+  # Secret with the redis-password key.
   existingSecret: ""
   image:
     repository: docker.io/redis
@@ -102,8 +102,8 @@ ingress:
   webdav:
     path: /seafdav
   traefik:
-    # Создаёт Middleware и подключает её к Ingress. Нужна для
-    # загрузки больших файлов через WebDAV.
+    # Creates a Middleware and attaches it to the Ingress. Needed for
+    # uploading large files over WebDAV.
     buffering: false
 
 serviceAccount:
@@ -120,7 +120,7 @@ nodeSelector: {}
 tolerations: []
 affinity: {}
 
-# Первичная инициализация БД занимает минуты, отсюда запас.
+# Initial database setup takes minutes, hence the generous threshold.
 startupProbe:
   httpGet:
     path: /api2/ping/
