@@ -1,0 +1,58 @@
+suite: NOTES.txt
+templates:
+  - NOTES.txt
+release:
+  name: t
+  namespace: seafile
+set:
+  seafile.serverHostname: seafile.example.com
+tests:
+  - it: предупреждает о пустом database.rootPassword, если нет existingSecret
+    set:
+      database.rootPassword: ""
+    asserts:
+      - matchRegexRaw:
+          pattern: "ВНИМАНИЕ: database.rootPassword пуст"
+
+  - it: предупреждает о пустом database.password, если нет existingSecret
+    set:
+      database.password: ""
+    asserts:
+      - matchRegexRaw:
+          pattern: "ВНИМАНИЕ: database.password пуст"
+
+  - it: не предупреждает о пароле БД, если задан database.existingSecret
+    set:
+      database.existingSecret: my-db-secret
+      database.rootPassword: ""
+      database.password: ""
+    asserts:
+      - notMatchRegexRaw:
+          pattern: "database.rootPassword"
+      - notMatchRegexRaw:
+          pattern: "database.password"
+
+  - it: предупреждает о пустом cache.password для встроенного redis без existingSecret
+    set:
+      cache.provider: redis
+      cache.password: ""
+    asserts:
+      - matchRegexRaw:
+          pattern: "ВНИМАНИЕ: cache.password пуст"
+
+  - it: не предупреждает о cache.password при cache.existingSecret
+    set:
+      cache.existingSecret: my-cache-secret
+      cache.password: ""
+    asserts:
+      - notMatchRegexRaw:
+          pattern: "cache.password"
+
+  - it: не предупреждает о cache.password при provider memcached
+    set:
+      cache.provider: memcached
+      cache.host: mc.example.com
+      cache.password: ""
+    asserts:
+      - notMatchRegexRaw:
+          pattern: "cache.password"
