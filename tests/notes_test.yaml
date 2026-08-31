@@ -12,14 +12,14 @@ tests:
       database.rootPassword: ""
     asserts:
       - matchRegexRaw:
-          pattern: "ВНИМАНИЕ: database.rootPassword пуст"
+          pattern: "WARNING: database.rootPassword is empty"
 
   - it: предупреждает о пустом database.password, если нет existingSecret
     set:
       database.password: ""
     asserts:
       - matchRegexRaw:
-          pattern: "ВНИМАНИЕ: database.password пуст"
+          pattern: "WARNING: database.password is empty"
 
   - it: не предупреждает о пароле БД, если задан database.existingSecret
     set:
@@ -38,7 +38,7 @@ tests:
       cache.password: ""
     asserts:
       - matchRegexRaw:
-          pattern: "ВНИМАНИЕ: cache.password пуст"
+          pattern: "WARNING: cache.password is empty"
 
   - it: не предупреждает о cache.password при cache.existingSecret
     set:

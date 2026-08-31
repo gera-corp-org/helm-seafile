@@ -40,8 +40,9 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end -}}
 
 {{/*
-Selector labels — только они попадают в selector, поэтому версия чарта
-сюда не входит: она меняется при апгрейде, а selector неизменяем.
+Selector labels — only these go into the selector, so the chart
+version is not included here: it changes on upgrade, and the selector
+is immutable.
 */}}
 {{- define "seafile.selectorLabels" -}}
 app.kubernetes.io/name: {{ include "seafile.name" . }}
@@ -69,9 +70,9 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
 
 {{/*
-Адрес БД. Явный host побеждает; иначе берётся встроенный сервис.
-Отключённая встроенная БД без host — ошибка рендера, а не тихий
-деплой в никуда.
+Database address. An explicit host wins; otherwise the built-in
+service is used. A disabled built-in database with no host is a
+render-time error, not a silent deploy into the void.
 */}}
 {{- define "seafile.database.host" -}}
 {{- if .Values.database.host -}}

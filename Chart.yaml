@@ -20,27 +20,27 @@ kubeVersion: ">=1.19.0-0"
 annotations:
   artifacthub.io/changes: |
     - kind: removed
-      description: "Зависимости Bitnami убраны — их образы удалены из Docker Hub и чарт не устанавливался"
+      description: "Removed the Bitnami dependencies — their images were pulled from Docker Hub and the chart no longer installed"
     - kind: removed
-      description: "memcached больше не поддерживается как встроенный сервис: с Seafile 13 кэшем стал Redis"
+      description: "memcached is no longer supported as a built-in service: Seafile 13 uses Redis for caching"
     - kind: changed
-      description: "BREAKING: MariaDB и Redis теперь собственные шаблоны на официальных образах, values переехали в database.* и cache.*"
+      description: "BREAKING: MariaDB and Redis are now dedicated templates on official images; values moved to database.* and cache.*"
     - kind: changed
-      description: "BREAKING: seafile.environment заменён структурированными полями и seafile.extraEnv"
+      description: "BREAKING: seafile.environment replaced with structured fields and seafile.extraEnv"
     - kind: changed
-      description: "BREAKING: seafile.image заменён на image.repository и image.tag"
+      description: "BREAKING: seafile.image replaced with image.repository and image.tag"
     - kind: changed
-      description: "BREAKING: ingress.enabled по умолчанию false — раньше Ingress создавался всегда"
+      description: "BREAKING: ingress.enabled now defaults to false — the Ingress used to be created always"
     - kind: fixed
-      description: "Ingress с TLS больше не рендерит secretName: map[] и пустой host"
+      description: "Ingress with TLS no longer renders secretName: map[] and an empty host"
     - kind: fixed
-      description: "webdav-Ingress создаётся только при seafile.webdav.enabled и указывает на существующий порт"
+      description: "The webdav Ingress is now only created when seafile.webdav.enabled is set, and points to an existing port"
     - kind: fixed
-      description: "clusterDomain объявлен — адрес БД больше не оканчивается точкой"
+      description: "clusterDomain is now declared — the database address no longer ends with a trailing dot"
     - kind: fixed
-      description: "Traefik Middleware теперь действительно подключается к Ingress аннотацией router.middlewares"
+      description: "The Traefik Middleware is now actually attached to the Ingress via the router.middlewares annotation"
     - kind: security
-      description: "Пароли переехали в Secret и подключаются через secretKeyRef, открытым текстом в spec пода их больше нет"
+      description: "Passwords moved into a Secret and are wired in via secretKeyRef; they no longer appear in plain text in the pod spec"
   artifacthub.io/images: |
     - name: seafile
       image: docker.io/seafileltd/seafile-mc:13.0.25

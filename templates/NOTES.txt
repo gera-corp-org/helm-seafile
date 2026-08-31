@@ -1,57 +1,72 @@
-Seafile {{ .Chart.AppVersion }} установлен как релиз {{ .Release.Name }}.
+Seafile {{ .Chart.AppVersion }} has been installed as release {{ .Release.Name }}.
 
 {{- if .Values.ingress.enabled }}
 
-  Адрес: {{ .Values.seafile.protocol }}://{{ .Values.ingress.host }}
+  URL: {{ .Values.seafile.protocol }}://{{ .Values.ingress.host }}
 {{- else }}
 
-  Ingress выключен. Пробросить порт локально:
+  Ingress is disabled. Forward the port locally:
 
     kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "seafile.fullname" . }} 8000:{{ .Values.service.port }}
 
-  Затем открыть http://localhost:8000
+  Then open http://localhost:8000
 {{- end }}
 
 {{- if not .Values.seafile.existingSecret }}
 {{- if not .Values.seafile.jwtPrivateKey }}
 
-  ВНИМАНИЕ: seafile.jwtPrivateKey пуст. Seafile не стартует без него.
-  Сгенерировать:  pwgen -s 40 1
+  WARNING: seafile.jwtPrivateKey is empty. Seafile won't start without
+  it. Generate one with:  pwgen -s 40 1
 {{- end }}
 {{- if not .Values.seafile.admin.email }}
 
-  ВНИМАНИЕ: seafile.admin.email пуст — учётная запись администратора
-  не будет создана при первом запуске.
+  WARNING: seafile.admin.email is empty — the admin account won't be
+  created on first startup.
 {{- end }}
 {{- end }}
 
 {{- if not .Values.database.existingSecret }}
 {{- if not .Values.database.rootPassword }}
 
-  ВНИМАНИЕ: database.rootPassword пуст. MariaDB не запустится с пустым
-  root-паролем (CrashLoopBackOff), а без него Seafile не сможет создать
-  свои базы через INIT_SEAFILE_MYSQL_ROOT_PASSWORD.
+  WARNING: database.rootPassword is empty. MariaDB won't start with an
+  empty root password (CrashLoopBackOff), and without it Seafile can't
+  create its databases via INIT_SEAFILE_MYSQL_ROOT_PASSWORD.
 {{- end }}
 {{- if not .Values.database.password }}
 
-  ВНИМАНИЕ: database.password пуст — Seafile не сможет подключиться
-  к базе данных пользователем {{ .Values.database.user }}.
+  WARNING: database.password is empty — Seafile won't be able to
+  connect to the database as user {{ .Values.database.user }}.
 {{- end }}
 {{- end }}
 
 {{- if and (eq .Values.cache.provider "redis") (not .Values.cache.existingSecret) }}
 {{- if not .Values.cache.password }}
 
-  ВНИМАНИЕ: cache.password пуст — встроенный Redis запустится без пароля
-  автоматически (--requirepass ""), но это следует задать явно.
+  WARNING: cache.password is empty — the built-in Redis will start
+  with no password automatically (--requirepass ""), but you should
+  set this explicitly.
 {{- end }}
 {{- end }}
 
-  Первый запуск инициализирует базы и занимает несколько минут.
-  Прогресс:
+{{- if .Values.seafile.webdav.enabled }}
+
+  WARNING: the chart opened the port and route for WebDAV, but it
+  can't enable the service itself — Seafile only reads this flag from
+  seafdav.conf, and upstream never added an environment variable for
+  it. Until the flag is set, {{ .Values.ingress.webdav.path }} returns 502. Run this once:
+
+    kubectl exec -n {{ .Release.Namespace }} {{ include "seafile.fullname" . }}-0 -- \
+      sed -i 's/^enabled = false/enabled = true/' /shared/seafile/conf/seafdav.conf
+    kubectl rollout restart sts/{{ include "seafile.fullname" . }} -n {{ .Release.Namespace }}
+
+  The edit lives in the PVC and survives restarts.
+{{- end }}
+
+  The first startup initializes the databases and takes a few minutes.
+  Progress:
 
     kubectl logs -n {{ .Release.Namespace }} -f {{ include "seafile.fullname" . }}-0
 
-  Проверить работоспособность:
+  Check that it's working:
 
     helm test {{ .Release.Name }} -n {{ .Release.Namespace }}

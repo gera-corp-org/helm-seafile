@@ -1,27 +1,27 @@
 # Seafile Helm Chart
 
-Helm-чарт для развёртывания [Seafile](https://www.seafile.com/) — сервера
-синхронизации и совместного доступа к файлам — в Kubernetes. Чарт
-включает собственные StatefulSet-ы MariaDB и Redis на официальных
-образах, Secret с учётными данными, Ingress (опционально) и hook
-`helm test`, проверяющий доступность сервера.
+A Helm chart for deploying [Seafile](https://www.seafile.com/) — a file
+sync and share server — on Kubernetes. The chart includes its own
+MariaDB and Redis StatefulSets built on official images, a Secret for
+credentials, an optional Ingress, and a `helm test` hook that checks
+the server is reachable.
 
-Чарт публикуется как OCI-артефакт в GitHub Container Registry:
+The chart is published as an OCI artifact on GitHub Container Registry:
 
 ```
 oci://ghcr.io/gera-corp-org/helm-charts/seafile
 ```
 
-## Требования
+## Requirements
 
-- Helm 3.8+ (нужна поддержка OCI-репозиториев).
+- Helm 3.8+ (OCI registry support is required).
 - Kubernetes 1.19+.
-- Доступ на чтение к `ghcr.io/gera-corp-org/helm-charts` (публичный registry,
-  анонимный `helm pull`/`helm install` работает без логина).
+- Read access to `ghcr.io/gera-corp-org/helm-charts` (a public registry —
+  anonymous `helm pull`/`helm install` works without logging in).
 
-## Установка
+## Installation
 
-Обязательные значения: `seafile.serverHostname`, `seafile.jwtPrivateKey`,
+Required values: `seafile.serverHostname`, `seafile.jwtPrivateKey`,
 `seafile.admin.email`, `seafile.admin.password`, `database.rootPassword`,
 `database.password`, `cache.password`.
 
@@ -38,8 +38,8 @@ helm install seafile oci://ghcr.io/gera-corp-org/helm-charts/seafile \
   --set cache.password=CHANGE-ME
 ```
 
-Для постоянной конфигурации те же значения лучше держать в
-`values.yaml` и ставить `--values`:
+For a persistent configuration, keep these same values in
+`values.yaml` and pass `--values`:
 
 ```bash
 helm install seafile oci://ghcr.io/gera-corp-org/helm-charts/seafile \
@@ -48,30 +48,32 @@ helm install seafile oci://ghcr.io/gera-corp-org/helm-charts/seafile \
   --values my-values.yaml
 ```
 
-## Секреты
+## Secrets
 
-Чарт создаёт до трёх Secret-ов (по одному на компонент), если для
-каждого не указан `existingSecret`:
+The chart creates up to three Secrets (one per component), unless
+`existingSecret` is set for that component:
 
-| Secret | Условие создания | Ключи |
+| Secret | Created when | Keys |
 |---|---|---|
-| `<fullname>` | `seafile.existingSecret` пуст | `admin-email`, `admin-password`, `jwt-private-key` |
-| `<fullname>-mariadb` | `database.existingSecret` пуст | `mariadb-root-password`, `mariadb-password` |
-| `<fullname>-redis` | `cache.provider=redis` и `cache.existingSecret` пуст | `redis-password` |
+| `<fullname>` | `seafile.existingSecret` is empty | `admin-email`, `admin-password`, `jwt-private-key` |
+| `<fullname>-mariadb` | `database.existingSecret` is empty | `mariadb-root-password`, `mariadb-password` |
+| `<fullname>-redis` | `cache.provider=redis` and `cache.existingSecret` is empty | `redis-password` |
 
-Секрет MariaDB создаётся независимо от `database.enabled`: под Seafile
-безусловно ссылается на оба ключа, в том числе при внешней БД (см.
-раздел «Внешние БД и кэш» ниже) — без этого секрета под не стартует.
-Секрет Redis создаётся только для `cache.provider=redis` (включая
-внешний Redis без встроенного StatefulSet-а); при `provider=memcached`
-он не нужен и не создаётся.
+The MariaDB Secret is created regardless of `database.enabled`: the
+Seafile pod always references both keys, even with an external
+database (see "External database and cache" below) — without this
+Secret the pod won't start. The Redis Secret is created only for
+`cache.provider=redis` (including an external Redis with no built-in
+StatefulSet); with `provider=memcached` it isn't needed and isn't
+created.
 
-`<fullname>` — имя релиза, либо `<release>-seafile`, если имя релиза
-не содержит `seafile` (см. `seafile.fullname` в `_helpers.tpl`).
+`<fullname>` is the release name, or `<release>-seafile` if the
+release name doesn't contain `seafile` (see `seafile.fullname` in
+`_helpers.tpl`).
 
-Если секрет уже существует в кластере (создан отдельно, синковалка
-Vault и т. п.), передайте его имя через `existingSecret` — чарт не
-будет создавать свой:
+If a Secret already exists in the cluster (created separately, by a
+Vault sync tool, etc.), pass its name via `existingSecret` — the chart
+won't create its own:
 
 ```bash
 --set seafile.existingSecret=my-seafile-secret \
@@ -81,11 +83,12 @@ Vault и т. п.), передайте его имя через `existingSecret` 
 
 ### bank-vaults / vault-secrets-webhook
 
-Если в кластере работает [vault-secrets-webhook](https://github.com/bank-vaults/vault-secrets-webhook),
-значения вида `vault:secret/data/path#KEY` подставляются в переменные
-окружения пода на этапе admission — секрет из values.yaml никогда не
-попадает в Kubernetes Secret или git в открытом виде. Именно ради
-этого сценария в чарте сохранён сырой список `seafile.extraEnv`:
+If [vault-secrets-webhook](https://github.com/bank-vaults/vault-secrets-webhook)
+is running in the cluster, values shaped like `vault:secret/data/path#KEY`
+get substituted into the pod's environment variables at the admission
+stage — the secret from values.yaml never ends up in a Kubernetes
+Secret or in git in plain text. The chart keeps a raw `seafile.extraEnv`
+list specifically for this scenario:
 
 ```yaml
 seafile:
@@ -94,83 +97,83 @@ seafile:
       value: "vault:secret/data/seafile#JWT_PRIVATE_KEY"
 ```
 
-`extraEnv` добавляется в контейнер последним и переопределяет
-одноимённые переменные, заданные структурированными полями
-(`seafile.jwtPrivateKey` и т. д.), поэтому его можно использовать
-вместо `existingSecret` для отдельных значений, не отказываясь от
-чартового секрета целиком.
+`extraEnv` is appended to the container last and overrides any
+variables of the same name set through the structured fields
+(`seafile.jwtPrivateKey`, etc.), so it can be used instead of
+`existingSecret` for individual values without giving up the chart's
+Secret entirely.
 
-## Основные параметры
+## Main parameters
 
-| Параметр | Описание | По умолчанию |
+| Parameter | Description | Default |
 |---|---|---|
-| `image.repository` | Образ Seafile | `docker.io/seafileltd/seafile-mc` |
-| `image.tag` | Тег образа Seafile | `""` (берётся `appVersion` чарта) |
-| `image.pullPolicy` | Политика подтяжки образа | `IfNotPresent` |
-| `imagePullSecrets` | Секреты для приватных registry | `[]` |
-| `replicaCount` | Число реплик StatefulSet. `0` останавливает Seafile без удаления релиза и данных | `1` |
-| `clusterDomain` | Домен кластера, используется для сборки внутренних FQDN MariaDB/Redis | `cluster.local` |
-| `nameOverride` | Переопределить короткое имя чарта в шаблонах | `""` |
-| `fullnameOverride` | Переопределить полное имя ресурсов (`<fullname>`) целиком | `""` |
-| `seafile.serverHostname` | Обязателен: FQDN/хост Seafile, без него генерируются нерабочие ссылки | `""` |
-| `seafile.protocol` | `http` или `https` | `https` |
-| `seafile.timeZone` | Часовой пояс контейнера | `Etc/UTC` |
-| `seafile.logToStdout` | Логи Seafile в stdout контейнера | `false` |
-| `seafile.admin.email` | E-mail первого администратора | `""` |
-| `seafile.admin.password` | Пароль первого администратора | `""` |
-| `seafile.jwtPrivateKey` | Ключ для JWT (notification-server, SeaDoc); генерировать `pwgen -s 40 1` | `""` |
-| `seafile.webdav.enabled` | Включить WebDAV-эндпоинт | `false` |
-| `seafile.existingSecret` | Имя существующего Secret вместо создаваемого чартом | `""` |
-| `seafile.extraEnv` | Сырой список `env` для контейнера Seafile, применяется последним | `[]` |
-| `seafile.extraEnvFrom` | Сырой список `envFrom` для контейнера Seafile | `[]` |
-| `database.enabled` | Разворачивать встроенную MariaDB | `true` |
-| `database.host` | Хост внешней БД (обязателен при `enabled=false`) | `""` |
-| `database.port` | Порт БД | `3306` |
-| `database.user` | Пользователь БД | `seafile` |
-| `database.password` | Пароль пользователя БД | `""` |
-| `database.rootPassword` | Root-пароль встроенной MariaDB | `""` |
-| `database.existingSecret` | Имя существующего Secret с ключами `mariadb-root-password`/`mariadb-password` | `""` |
-| `database.names.*` | Имена баз `ccnet`/`seafile`/`seahub` | `ccnet_db`/`seafile_db`/`seahub_db` |
-| `database.image.*` | Образ встроенной MariaDB | `docker.io/mariadb:11.4` |
-| `database.persistence.*` | PVC встроенной MariaDB (`enabled`, `size`, `storageClass`, `existingClaim`) | `enabled: true`, `size: 8Gi` |
-| `database.resources` | Requests/limits контейнера MariaDB | `{}` |
-| `cache.provider` | `redis` (встроенный) или `memcached` (только внешний) | `redis` |
-| `cache.enabled` | Разворачивать встроенный Redis | `true` |
-| `cache.host` | Хост внешнего кэша (обязателен при `enabled=false`) | `""` |
-| `cache.port` | Порт кэша | `6379` |
-| `cache.password` | Пароль Redis | `""` |
-| `cache.existingSecret` | Имя существующего Secret с ключом `redis-password` | `""` |
-| `cache.image.*` | Образ встроенного Redis | `docker.io/redis:8-alpine` |
-| `cache.resources` | Requests/limits контейнера Redis | `{}` |
-| `persistence.enabled` | PVC для данных Seafile | `true` |
-| `persistence.size` | Размер PVC | `10Gi` |
-| `persistence.storageClass` | StorageClass PVC | `""` |
-| `persistence.existingClaim` | Использовать существующий PVC вместо создания нового | `""` |
-| `persistence.annotations` | Аннотации PVC (по умолчанию защищает том от удаления) | `{helm.sh/resource-policy: keep}` |
-| `service.type` | Тип Service | `ClusterIP` |
-| `service.port` | Порт Service | `80` |
-| `ingress.enabled` | Создавать Ingress | `false` |
+| `image.repository` | Seafile image | `docker.io/seafileltd/seafile-mc` |
+| `image.tag` | Seafile image tag | `""` (uses the chart's `appVersion`) |
+| `image.pullPolicy` | Image pull policy | `IfNotPresent` |
+| `imagePullSecrets` | Secrets for private registries | `[]` |
+| `replicaCount` | Number of StatefulSet replicas. `0` stops Seafile without deleting the release or its data | `1` |
+| `clusterDomain` | Cluster domain, used to build internal MariaDB/Redis FQDNs | `cluster.local` |
+| `nameOverride` | Override the chart's short name in templates | `""` |
+| `fullnameOverride` | Override the full resource name (`<fullname>`) entirely | `""` |
+| `seafile.serverHostname` | Required: Seafile's FQDN/hostname; without it, generated links are broken | `""` |
+| `seafile.protocol` | `http` or `https` | `https` |
+| `seafile.timeZone` | Container timezone | `Etc/UTC` |
+| `seafile.logToStdout` | Send Seafile logs to the container's stdout | `false` |
+| `seafile.admin.email` | Email of the first admin account | `""` |
+| `seafile.admin.password` | Password of the first admin account | `""` |
+| `seafile.jwtPrivateKey` | JWT key (notification-server, SeaDoc); generate with `pwgen -s 40 1` | `""` |
+| `seafile.webdav.enabled` | Enable the WebDAV endpoint | `false` |
+| `seafile.existingSecret` | Name of an existing Secret to use instead of the one the chart creates | `""` |
+| `seafile.extraEnv` | Raw `env` list for the Seafile container, applied last | `[]` |
+| `seafile.extraEnvFrom` | Raw `envFrom` list for the Seafile container | `[]` |
+| `database.enabled` | Deploy the built-in MariaDB | `true` |
+| `database.host` | External database host (required when `enabled=false`) | `""` |
+| `database.port` | Database port | `3306` |
+| `database.user` | Database user | `seafile` |
+| `database.password` | Database user password | `""` |
+| `database.rootPassword` | Root password for the built-in MariaDB | `""` |
+| `database.existingSecret` | Name of an existing Secret with the `mariadb-root-password`/`mariadb-password` keys | `""` |
+| `database.names.*` | Names of the `ccnet`/`seafile`/`seahub` databases | `ccnet_db`/`seafile_db`/`seahub_db` |
+| `database.image.*` | Built-in MariaDB image | `docker.io/mariadb:11.4` |
+| `database.persistence.*` | Built-in MariaDB PVC (`enabled`, `size`, `storageClass`, `existingClaim`) | `enabled: true`, `size: 8Gi` |
+| `database.resources` | Requests/limits for the MariaDB container | `{}` |
+| `cache.provider` | `redis` (built-in) or `memcached` (external only) | `redis` |
+| `cache.enabled` | Deploy the built-in Redis | `true` |
+| `cache.host` | External cache host (required when `enabled=false`) | `""` |
+| `cache.port` | Cache port | `6379` |
+| `cache.password` | Redis password | `""` |
+| `cache.existingSecret` | Name of an existing Secret with the `redis-password` key | `""` |
+| `cache.image.*` | Built-in Redis image | `docker.io/redis:8-alpine` |
+| `cache.resources` | Requests/limits for the Redis container | `{}` |
+| `persistence.enabled` | PVC for Seafile data | `true` |
+| `persistence.size` | PVC size | `10Gi` |
+| `persistence.storageClass` | PVC StorageClass | `""` |
+| `persistence.existingClaim` | Use an existing PVC instead of creating a new one | `""` |
+| `persistence.annotations` | PVC annotations (defaults to protecting the volume from deletion) | `{helm.sh/resource-policy: keep}` |
+| `service.type` | Service type | `ClusterIP` |
+| `service.port` | Service port | `80` |
+| `ingress.enabled` | Create an Ingress | `false` |
 | `ingress.className` | `ingressClassName` | `""` |
-| `ingress.annotations` | Дополнительные аннотации Ingress | `{}` |
-| `ingress.host` | Хост Ingress (обязателен при `enabled=true`) | `""` |
-| `ingress.tls.enabled` | Включить TLS-блок Ingress | `false` |
-| `ingress.tls.secretName` | Secret с TLS-сертификатом (обязателен при `tls.enabled=true`) | `""` |
-| `ingress.webdav.path` | Путь WebDAV-маршрута Ingress | `/seafdav` |
-| `ingress.traefik.buffering` | Создать Traefik Middleware для больших загрузок (см. ниже) | `false` |
-| `serviceAccount.create` | Создавать ServiceAccount | `true` |
-| `serviceAccount.name` | Имя ServiceAccount (если не `create`, использовать существующий) | `""` |
-| `serviceAccount.annotations` | Аннотации ServiceAccount | `{}` |
-| `resources` | Requests/limits контейнера Seafile | `{}` |
-| `podAnnotations` | Аннотации пода Seafile | `{}` |
-| `podLabels` | Дополнительные labels пода Seafile | `{}` |
-| `podSecurityContext`, `securityContext` | Контексты безопасности пода/контейнера | `{}` |
-| `nodeSelector`, `tolerations`, `affinity` | Планирование пода | `{}` / `[]` / `{}` |
-| `startupProbe`, `livenessProbe`, `readinessProbe` | Пробы контейнера Seafile (`/api2/ping/`) | см. `values.yaml` |
+| `ingress.annotations` | Extra Ingress annotations | `{}` |
+| `ingress.host` | Ingress host (required when `enabled=true`) | `""` |
+| `ingress.tls.enabled` | Enable the Ingress TLS block | `false` |
+| `ingress.tls.secretName` | Secret with the TLS certificate (required when `tls.enabled=true`) | `""` |
+| `ingress.webdav.path` | Path for the Ingress WebDAV route | `/seafdav` |
+| `ingress.traefik.buffering` | Create a Traefik Middleware for large uploads (see below) | `false` |
+| `serviceAccount.create` | Create a ServiceAccount | `true` |
+| `serviceAccount.name` | ServiceAccount name (if not `create`, use an existing one) | `""` |
+| `serviceAccount.annotations` | ServiceAccount annotations | `{}` |
+| `resources` | Requests/limits for the Seafile container | `{}` |
+| `podAnnotations` | Seafile pod annotations | `{}` |
+| `podLabels` | Extra labels for the Seafile pod | `{}` |
+| `podSecurityContext`, `securityContext` | Pod/container security contexts | `{}` |
+| `nodeSelector`, `tolerations`, `affinity` | Pod scheduling | `{}` / `[]` / `{}` |
+| `startupProbe`, `livenessProbe`, `readinessProbe` | Seafile container probes (`/api2/ping/`) | see `values.yaml` |
 
-## Внешние БД и кэш
+## External database and cache
 
-Чтобы использовать управляемую MariaDB и Redis вместо встроенных
-StatefulSet-ов, отключите `enabled` и укажите хост:
+To use a managed MariaDB and Redis instead of the built-in
+StatefulSets, disable `enabled` and set the host:
 
 ```bash
 helm install seafile oci://ghcr.io/gera-corp-org/helm-charts/seafile \
@@ -188,16 +191,18 @@ helm install seafile oci://ghcr.io/gera-corp-org/helm-charts/seafile \
   --set cache.password=CHANGE-ME
 ```
 
-`database.rootPassword` при `database.enabled=false` не используется
-шаблонами, но остаётся частью Secret-контракта — передайте любое
-значение, если не указываете `database.existingSecret`.
+`database.rootPassword` isn't used by the templates when
+`database.enabled=false`, but it's still part of the Secret contract —
+pass any value if you're not setting `database.existingSecret`.
 
 ## WebDAV
 
-Включается `seafile.webdav.enabled=true`. При включённом Ingress
-(`ingress.enabled=true`) чарт автоматически добавляет маршрут на путь
-`ingress.webdav.path` (по умолчанию `/seafdav`), указывающий на порт
-`8080` сервиса Seafile:
+**Requires one manual step — the chart cannot enable WebDAV by
+itself.**
+
+`seafile.webdav.enabled=true` opens port `8080` on the container and
+the Service, and adds a route on the `ingress.webdav.path` path
+(`/seafdav` by default) when Ingress is enabled:
 
 ```bash
 --set seafile.webdav.enabled=true \
@@ -205,14 +210,42 @@ helm install seafile oci://ghcr.io/gera-corp-org/helm-charts/seafile \
 --set ingress.host=seafile.example.com
 ```
 
+That's enough on the networking side, but not for Seafile itself: it
+only reads the enable flag from `seafdav.conf`, and
+`setup-seafile-mysql.py` inside the image hardcodes `enabled = false`
+there. There's no environment variable for this — [adding one was
+proposed back in 2019](https://github.com/haiwen/seafile-docker/pull/187)
+specifically for Kubernetes, but the PR was never merged. The
+[Seafile documentation](https://manual.seafile.com/13.0/extension/webdav/)
+says to edit the file and restart the server.
+
+Until the flag is set, `/seafdav` returns `502`. To enable it:
+
+```bash
+kubectl exec -n seafile seafile-0 -- \
+  sed -i 's/^enabled = false/enabled = true/' /shared/seafile/conf/seafdav.conf
+kubectl rollout restart sts/seafile -n seafile
+```
+
+Verify (success is `207 Multi-Status`):
+
+```bash
+curl -u 'admin@example.com:PASSWORD' -X PROPFIND -H 'Depth: 0' \
+  -o /dev/null -w '%{http_code}\n' https://seafile.example.com/seafdav/
+```
+
+The edit lives in the PVC and survives pod restarts, but won't survive
+the volume being recreated. Large uploads over WebDAV behind Traefik
+also need the section below.
+
 ## Traefik
 
-`ingress.traefik.buffering=true` создаёт Traefik `Middleware` и
-подключает её к Ingress аннотацией
-`traefik.ingress.kubernetes.io/router.middlewares`. Без буферизации
-Traefik по умолчанию ограничивает размер тела запроса, из-за чего
-крупные файлы (в первую очередь через WebDAV) не загружаются. Опция
-имеет смысл только с `ingress.className=traefik`:
+`ingress.traefik.buffering=true` creates a Traefik `Middleware` and
+attaches it to the Ingress via the
+`traefik.ingress.kubernetes.io/router.middlewares` annotation. Without
+buffering, Traefik's default request body size limit blocks large file
+uploads (WebDAV in particular). This option only makes sense with
+`ingress.className=traefik`:
 
 ```bash
 --set ingress.enabled=true \
@@ -221,11 +254,11 @@ Traefik по умолчанию ограничивает размер тела �
 --set ingress.traefik.buffering=true
 ```
 
-## Миграция 0.1.5 → 0.2.0
+## Migrating from 0.1.5 to 0.2.0
 
-Зависимости Bitnami (MariaDB, Redis) удалены — их образы больше не
-публикуются на Docker Hub, и чарт 0.1.5 с ними не устанавливается.
-Интерфейс values изменился:
+The Bitnami dependencies (MariaDB, Redis) have been removed — their
+images are no longer published on Docker Hub, so chart 0.1.5 no longer
+installs with them. The values interface has changed:
 
 | 0.1.5 | 0.2.0 |
 |---|---|
@@ -234,32 +267,33 @@ Traefik по умолчанию ограничивает размер тела �
 | `seafile.persistence.*` | `persistence.*` |
 | `seafile.persistence.storageClassName` | `persistence.storageClass` |
 | `seafile.database.hostname` | `database.host` |
-| `seafile.database.rootPasswordSecret.{name,key}` | `database.existingSecret` с ключом `mariadb-root-password` |
+| `seafile.database.rootPasswordSecret.{name,key}` | `database.existingSecret` with the `mariadb-root-password` key |
 | `seafile.podSecurityContext` | `podSecurityContext` |
 | `seafile.securityContext` | `securityContext` |
-| `seafile.environment` (плоский список) | структурированные поля плюс `seafile.extraEnv` |
-| `memcached.*` | удалено; встроенного memcached нет, внешний задаётся через `cache.provider: memcached` и `cache.host` |
+| `seafile.environment` (flat list) | structured fields plus `seafile.extraEnv` |
+| `memcached.*` | removed; there's no built-in memcached — external memcached is configured via `cache.provider: memcached` and `cache.host` |
 | `mariadb.*` (Bitnami) | `database.*` |
 | `redis.*` (Bitnami) | `cache.*` |
 | `ingress.annotations["kubernetes.io/spec.ingressClassName"]` | `ingress.className` |
-| `ingress.tls.host` | берётся из `ingress.host` |
-| `ingress.tls.secretName` | `ingress.tls.secretName` плюс `ingress.tls.enabled` |
-| — | `ingress.enabled`, по умолчанию `false` |
+| `ingress.tls.host` | taken from `ingress.host` |
+| `ingress.tls.secretName` | `ingress.tls.secretName` plus `ingress.tls.enabled` |
+| — | `ingress.enabled`, defaults to `false` |
 
-**Ломающее изменение: `ingress.enabled` теперь по умолчанию `false`**,
-тогда как в 0.1.5 Ingress создавался всегда. **Апгрейд существующего
-релиза без явной установки `ingress.enabled=true` удалит Ingress.**
-Перед `helm upgrade` явно передайте:
+**Breaking change: `ingress.enabled` now defaults to `false`**,
+whereas in 0.1.5 the Ingress was always created. **Upgrading an
+existing release without explicitly setting `ingress.enabled=true`
+will delete the Ingress.** Before `helm upgrade`, explicitly pass:
 
 ```bash
 --set ingress.enabled=true --set ingress.host=seafile.example.com
 ```
 
-## Переход с kubectl apply на Helm
+## Migrating from kubectl apply to Helm
 
-Если Seafile в кластере уже развёрнут напрямую манифестами
-(`kubectl apply`), существующий PVC с данными можно забрать под
-управление Helm, не пересоздавая том — через `persistence.existingClaim`:
+If Seafile is already deployed in the cluster directly via manifests
+(`kubectl apply`), the existing data PVC can be brought under Helm
+management without recreating the volume — via
+`persistence.existingClaim`:
 
 ```bash
 helm install seafile oci://ghcr.io/gera-corp-org/helm-charts/seafile \
@@ -274,12 +308,13 @@ helm install seafile oci://ghcr.io/gera-corp-org/helm-charts/seafile \
   --set persistence.existingClaim=seafile-data
 ```
 
-Чарт не создаёт новый PVC, если указан `existingClaim`, и монтирует
-существующий том как есть. По умолчанию `persistence.annotations`
-включает `helm.sh/resource-policy: keep` — эта аннотация запрещает
-Helm удалять PVC при `helm uninstall` или при пересоздании ресурса,
-так что данные остаются в кластере, даже если релиз будет снесён.
-Если вы забираете уже существующий PVC (созданный не этим чартом),
-проверьте, что аннотация `helm.sh/resource-policy: keep` стоит и на
-нём самом — иначе Helm не тронет том, но и её отсутствие ничем не
-защищено на будущее.
+The chart doesn't create a new PVC when `existingClaim` is set, and
+mounts the existing volume as-is. By default, `persistence.annotations`
+includes `helm.sh/resource-policy: keep` — this annotation stops Helm
+from deleting the PVC on `helm uninstall` or when the resource is
+recreated, so the data stays in the cluster even if the release is
+torn down. If you're adopting a PVC that already exists (created
+outside this chart), verify that the `helm.sh/resource-policy: keep`
+annotation is present on it as well — without it, Helm won't
+necessarily touch the volume today, but nothing protects it from
+deletion in the future.
