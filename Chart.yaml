@@ -1,7 +1,7 @@
 apiVersion: v2
 name: seafile
 type: application
-version: 0.2.0
+version: 0.2.1
 appVersion: "13.0.25"
 icon: https://www.seafile.com/media/img/seafile-logo.png
 home: https://github.com/gera-corp-org/helm-seafile
@@ -19,6 +19,8 @@ maintainers:
 kubeVersion: ">=1.19.0-0"
 annotations:
   artifacthub.io/changes: |
+    - kind: added
+      description: "database.persistence.subPath — mount a subdirectory of the volume as the MariaDB data directory, for adopting a volume written by another chart"
     - kind: removed
       description: "Removed the Bitnami dependencies — their images were pulled from Docker Hub and the chart no longer installed"
     - kind: removed

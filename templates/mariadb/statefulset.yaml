@@ -68,6 +68,9 @@ spec:
         volumeMounts:
         - name: data
           mountPath: /var/lib/mysql
+          {{- with .Values.database.persistence.subPath }}
+          subPath: {{ . | quote }}
+          {{- end }}
   {{- if and .Values.database.persistence.enabled (not .Values.database.persistence.existingClaim) }}
   volumeClaimTemplates:
   - metadata:

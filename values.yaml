@@ -61,6 +61,12 @@ database:
     size: 8Gi
     storageClass: ""
     existingClaim: ""
+    # Subdirectory of the volume to use as the data directory. Leave empty
+    # unless you are adopting a volume written by another chart: the Bitnami
+    # MariaDB chart, for one, keeps its data under a "data" subdirectory,
+    # and mounting the volume root at /var/lib/mysql makes the official
+    # image treat it as empty and initialize a fresh database beside it.
+    subPath: ""
   resources: {}
 
 cache:

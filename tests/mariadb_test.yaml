@@ -121,3 +121,21 @@ tests:
       - equal:
           path: metadata.labels["app.kubernetes.io/component"]
           value: mariadb
+
+  - it: no subPath on the volume mount by default
+    template: mariadb/statefulset.yaml
+    asserts:
+      - isNull:
+          path: spec.template.spec.containers[0].volumeMounts[0].subPath
+
+  - it: subPath mounts a subdirectory as the data directory
+    template: mariadb/statefulset.yaml
+    set:
+      database.persistence.subPath: data
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[0].mountPath
+          value: /var/lib/mysql
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[0].subPath
+          value: data

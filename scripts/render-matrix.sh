@@ -59,6 +59,7 @@ run "external-db+cache" --set database.enabled=false --set database.host=db.exam
 run "memcached"      --set cache.provider=memcached --set cache.host=mc.example.com
 run "existing-secrets" --set seafile.existingSecret=s --set database.existingSecret=d \
                        --set cache.existingSecret=c
+run "db-subpath"       --set database.persistence.subPath=data
 run "paused"         --set replicaCount=0
 
 echo "all configurations passed"

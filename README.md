@@ -135,7 +135,7 @@ Secret entirely.
 | `database.existingSecret` | Name of an existing Secret with the `mariadb-root-password`/`mariadb-password` keys | `""` |
 | `database.names.*` | Names of the `ccnet`/`seafile`/`seahub` databases | `ccnet_db`/`seafile_db`/`seahub_db` |
 | `database.image.*` | Built-in MariaDB image | `docker.io/mariadb:11.4` |
-| `database.persistence.*` | Built-in MariaDB PVC (`enabled`, `size`, `storageClass`, `existingClaim`) | `enabled: true`, `size: 8Gi` |
+| `database.persistence.*` | Built-in MariaDB PVC (`enabled`, `size`, `storageClass`, `existingClaim`, `subPath`) | `enabled: true`, `size: 8Gi` |
 | `database.resources` | Requests/limits for the MariaDB container | `{}` |
 | `cache.provider` | `redis` (built-in) or `memcached` (external only) | `redis` |
 | `cache.enabled` | Deploy the built-in Redis | `true` |
@@ -169,6 +169,27 @@ Secret entirely.
 | `podSecurityContext`, `securityContext` | Pod/container security contexts | `{}` |
 | `nodeSelector`, `tolerations`, `affinity` | Pod scheduling | `{}` / `[]` / `{}` |
 | `startupProbe`, `livenessProbe`, `readinessProbe` | Seafile container probes (`/api2/ping/`) | see `values.yaml` |
+
+## Adopting a volume from another chart
+
+The official MariaDB image keeps its data directly in `/var/lib/mysql`,
+while some other charts — the Bitnami one among them — keep it under a
+`data` subdirectory of the volume. Mounting such a volume at the root
+makes the official image see no database, initialize a fresh one beside
+the old files, and reject every existing login with `Access denied`. The
+old data is untouched, just invisible.
+
+`database.persistence.subPath` mounts a subdirectory as the data
+directory instead, which leaves the volume layout as it was:
+
+```bash
+--set database.persistence.existingClaim=data-seafile-mariadb-0 \
+--set database.persistence.subPath=data
+```
+
+Check what is actually on the volume before setting this — if the volume
+root already holds `ibdata1` and a `mysql/` directory, it is a plain data
+directory and `subPath` must stay empty.
 
 ## External database and cache
 
