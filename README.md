@@ -27,7 +27,7 @@ Required values: `seafile.serverHostname`, `seafile.jwtPrivateKey`,
 
 ```bash
 helm install seafile oci://ghcr.io/gera-corp-org/helm-charts/seafile \
-  --version 0.3.1 \
+  --version 0.3.2 \
   --namespace seafile --create-namespace \
   --set seafile.serverHostname=seafile.example.com \
   --set seafile.jwtPrivateKey=$(pwgen -s 40 1) \
@@ -43,7 +43,7 @@ For a persistent configuration, keep these same values in
 
 ```bash
 helm install seafile oci://ghcr.io/gera-corp-org/helm-charts/seafile \
-  --version 0.3.1 \
+  --version 0.3.2 \
   --namespace seafile --create-namespace \
   --values my-values.yaml
 ```
@@ -65,7 +65,7 @@ curl -fsSL https://raw.githubusercontent.com/gera-corp-org/helm-seafile/master/K
   | gpg --dearmor > ~/.gnupg/seafile-chart.gpg
 
 helm install seafile oci://ghcr.io/gera-corp-org/helm-charts/seafile \
-  --version 0.3.1 --verify --keyring ~/.gnupg/seafile-chart.gpg \
+  --version 0.3.2 --verify --keyring ~/.gnupg/seafile-chart.gpg \
   --values my-values.yaml
 ```
 
@@ -74,8 +74,8 @@ signature does not match, or the chart digest differs from the one that
 was signed. To check a downloaded chart without installing it:
 
 ```bash
-helm pull oci://ghcr.io/gera-corp-org/helm-charts/seafile --version 0.3.1 --prov
-helm verify --keyring ~/.gnupg/seafile-chart.gpg seafile-0.3.1.tgz
+helm pull oci://ghcr.io/gera-corp-org/helm-charts/seafile --version 0.3.2 --prov
+helm verify --keyring ~/.gnupg/seafile-chart.gpg seafile-0.3.2.tgz
 ```
 
 Compare the fingerprint above against the key you imported before
@@ -297,7 +297,7 @@ StatefulSets, disable `enabled` and set the host:
 
 ```bash
 helm install seafile oci://ghcr.io/gera-corp-org/helm-charts/seafile \
-  --version 0.3.1 \
+  --version 0.3.2 \
   --set seafile.serverHostname=seafile.example.com \
   --set seafile.jwtPrivateKey=$(pwgen -s 40 1) \
   --set seafile.admin.email=admin@example.com \
@@ -417,7 +417,7 @@ management without recreating the volume — via
 
 ```bash
 helm install seafile oci://ghcr.io/gera-corp-org/helm-charts/seafile \
-  --version 0.3.1 \
+  --version 0.3.2 \
   --set seafile.serverHostname=seafile.example.com \
   --set seafile.jwtPrivateKey=$(pwgen -s 40 1) \
   --set seafile.admin.email=admin@example.com \

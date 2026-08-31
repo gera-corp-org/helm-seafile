@@ -80,15 +80,25 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Signing is skipped when the secrets are absent, so a fork can still
-      # build and publish without holding the signing key.
+      # A release is signed or it does not happen. An earlier version made
+      # signing conditional so that a fork without the key could still
+      # publish; the condition silently evaluated false against a secret
+      # that existed but was empty, and 0.3.1 went out unsigned while its
+      # own README promised a signature. Failing loudly is the point.
       - name: Import the signing key
-        id: gpg
-        if: startsWith(github.ref, 'refs/tags/v') && env.HAVE_KEY == 'true'
-        env:
-          HAVE_KEY: ${{ secrets.GPG_PRIVATE_KEY != '' }}
+        if: startsWith(github.ref, 'refs/tags/v')
         run: |
-          echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
+          key='${{ secrets.GPG_PRIVATE_KEY }}'
+          # The length is not sensitive and turns "the secret looked fine
+          # locally" into something checkable: 0.3.1 shipped unsigned
+          # because the expression saw an empty secret and nothing said so.
+          echo "GPG_PRIVATE_KEY is ${#key} bytes"
+          if [ -z "$key" ]; then
+            echo "::error::GPG_PRIVATE_KEY is empty or unset — refusing to publish unsigned"
+            exit 1
+          fi
+          printf '%s' "$key" | gpg --batch --import
+          gpg --list-secret-keys --keyid-format=long
           # Helm reads a legacy keyring; GnuPG 2.1 and newer no longer keep
           # one, so it has to be exported explicitly.
           gpg --batch --pinentry-mode loopback \
@@ -100,26 +110,29 @@ jobs:
       - name: Package and push
         if: startsWith(github.ref, 'refs/tags/v')
         env:
-          HAVE_KEY: ${{ secrets.GPG_PRIVATE_KEY != '' }}
           SIGN_KEY: ${{ vars.GPG_SIGN_KEY }}
         run: |
           version="${GITHUB_REF_NAME#v}"
-          if [ "$HAVE_KEY" = "true" ]; then
-            helm package . -d /tmp \
-              --sign --key "$SIGN_KEY" \
-              --keyring /tmp/secring.gpg \
-              --passphrase-file /tmp/passphrase
-            # The .prov must sit next to the .tgz: helm push uploads it
-            # alongside the chart, and that is what Artifact Hub reads.
-            test -f "/tmp/seafile-${version}.tgz.prov" \
-              || { echo "::error::signing produced no .prov"; exit 1; }
-            helm verify --keyring /tmp/secring.gpg "/tmp/seafile-${version}.tgz"
-          else
-            echo "::warning::no signing key configured, publishing unsigned"
-            helm package . -d /tmp
-          fi
+          helm package . -d /tmp \
+            --sign --key "$SIGN_KEY" \
+            --keyring /tmp/secring.gpg \
+            --passphrase-file /tmp/passphrase
+          # The .prov must sit next to the .tgz: helm push uploads it
+          # alongside the chart, and that is what Artifact Hub reads.
+          test -f "/tmp/seafile-${version}.tgz.prov" \
+            || { echo "::error::signing produced no .prov"; exit 1; }
+          helm verify --keyring /tmp/secring.gpg "/tmp/seafile-${version}.tgz"
           helm push "/tmp/seafile-${version}.tgz" \
             "oci://${{ env.REGISTRY }}/${{ env.ORG }}/helm-charts"
+          # Proves the provenance layer actually reached the registry, which
+          # a local helm verify cannot tell you — 0.3.1 passed every local
+          # check and still published without one.
+          rm -f "/tmp/seafile-${version}.tgz" "/tmp/seafile-${version}.tgz.prov"
+          helm pull "oci://${{ env.REGISTRY }}/${{ env.ORG }}/helm-charts/seafile" \
+            --version "$version" --prov -d /tmp
+          test -f "/tmp/seafile-${version}.tgz.prov" \
+            || { echo "::error::the registry has no provenance layer"; exit 1; }
+          helm verify --keyring /tmp/secring.gpg "/tmp/seafile-${version}.tgz"
           shred -u /tmp/passphrase /tmp/secring.gpg 2>/dev/null || true
 
       # Also on manual dispatch: the ownership claim is independent of the
