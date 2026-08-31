@@ -27,7 +27,7 @@ Required values: `seafile.serverHostname`, `seafile.jwtPrivateKey`,
 
 ```bash
 helm install seafile oci://ghcr.io/gera-corp-org/helm-charts/seafile \
-  --version 0.3.0 \
+  --version 0.3.1 \
   --namespace seafile --create-namespace \
   --set seafile.serverHostname=seafile.example.com \
   --set seafile.jwtPrivateKey=$(pwgen -s 40 1) \
@@ -43,10 +43,44 @@ For a persistent configuration, keep these same values in
 
 ```bash
 helm install seafile oci://ghcr.io/gera-corp-org/helm-charts/seafile \
-  --version 0.3.0 \
+  --version 0.3.1 \
   --namespace seafile --create-namespace \
   --values my-values.yaml
 ```
+
+## Verifying the chart
+
+Every release is signed. The signature travels with the chart as a
+provenance file, and the public key lives in `KEY.gpg` at the root of
+this repository:
+
+```
+fingerprint: 8E7C9825847DDCEA328ED304BE5A2B52302C7EEF
+```
+
+Import the key once, then let Helm check the signature on install:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/gera-corp-org/helm-seafile/master/KEY.gpg \
+  | gpg --dearmor > ~/.gnupg/seafile-chart.gpg
+
+helm install seafile oci://ghcr.io/gera-corp-org/helm-charts/seafile \
+  --version 0.3.1 --verify --keyring ~/.gnupg/seafile-chart.gpg \
+  --values my-values.yaml
+```
+
+`--verify` refuses to install if the provenance file is missing, the
+signature does not match, or the chart digest differs from the one that
+was signed. To check a downloaded chart without installing it:
+
+```bash
+helm pull oci://ghcr.io/gera-corp-org/helm-charts/seafile --version 0.3.1 --prov
+helm verify --keyring ~/.gnupg/seafile-chart.gpg seafile-0.3.1.tgz
+```
+
+Compare the fingerprint above against the key you imported before
+trusting either — a key served from the same place as the chart proves
+only that both came from whoever controls that repository.
 
 ## Secrets
 
@@ -263,7 +297,7 @@ StatefulSets, disable `enabled` and set the host:
 
 ```bash
 helm install seafile oci://ghcr.io/gera-corp-org/helm-charts/seafile \
-  --version 0.3.0 \
+  --version 0.3.1 \
   --set seafile.serverHostname=seafile.example.com \
   --set seafile.jwtPrivateKey=$(pwgen -s 40 1) \
   --set seafile.admin.email=admin@example.com \
@@ -383,7 +417,7 @@ management without recreating the volume — via
 
 ```bash
 helm install seafile oci://ghcr.io/gera-corp-org/helm-charts/seafile \
-  --version 0.3.0 \
+  --version 0.3.1 \
   --set seafile.serverHostname=seafile.example.com \
   --set seafile.jwtPrivateKey=$(pwgen -s 40 1) \
   --set seafile.admin.email=admin@example.com \
