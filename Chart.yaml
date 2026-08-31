@@ -1,7 +1,7 @@
 apiVersion: v2
 name: seafile
 type: application
-version: 0.2.1
+version: 0.3.0
 appVersion: "13.0.25"
 icon: https://www.seafile.com/media/img/seafile-logo.png
 home: https://github.com/gera-corp-org/helm-seafile
@@ -19,6 +19,8 @@ maintainers:
 kubeVersion: ">=1.19.0-0"
 annotations:
   artifacthub.io/changes: |
+    - kind: added
+      description: "podSecurityContext and securityContext for the built-in MariaDB and Redis, so both can run as non-root — verified on a cluster with runAsUser 999 and an empty capability set"
     - kind: added
       description: "database.persistence.subPath — mount a subdirectory of the volume as the MariaDB data directory, for adopting a volume written by another chart"
     - kind: removed
