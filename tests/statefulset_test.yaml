@@ -131,3 +131,31 @@ tests:
     asserts:
       - isNull:
           path: spec.volumeClaimTemplates
+
+  # Находка 5: README обещает, что helm.sh/resource-policy: keep защищает
+  # PVC от удаления при helm uninstall. Тихая потеря этого блока — потеря
+  # данных, а не просто отличие в манифесте.
+  - it: volumeClaimTemplate несёт аннотацию helm.sh/resource-policy keep
+    template: statefulset.yaml
+    asserts:
+      - equal:
+          path: spec.volumeClaimTemplates[0].metadata.annotations["helm.sh/resource-policy"]
+          value: keep
+
+  # Находка 5: replicaCount: 0 документирован как способ остановки Seafile
+  # без удаления релиза/данных — replicas обязан реально браться из values.
+  - it: replicaCount 0 останавливает StatefulSet
+    template: statefulset.yaml
+    set:
+      replicaCount: 0
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 0
+
+  - it: replicaCount по умолчанию равен 1
+    template: statefulset.yaml
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 1
