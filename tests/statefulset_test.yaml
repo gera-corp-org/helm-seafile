@@ -13,7 +13,7 @@ tests:
     asserts:
       - equal:
           path: spec.template.spec.containers[0].image
-          value: docker.io/seafileltd/seafile-mc:13.0.25
+          value: docker.io/seafileltd/seafile-mc:13.0.28
 
   - it: selector and pod carry a component label distinguishing them from mariadb/redis
     template: statefulset.yaml

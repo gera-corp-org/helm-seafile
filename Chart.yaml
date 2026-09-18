@@ -1,8 +1,8 @@
 apiVersion: v2
 name: seafile
 type: application
-version: 0.3.2
-appVersion: "13.0.25"
+version: 0.3.3
+appVersion: "13.0.28"
 icon: https://www.seafile.com/media/img/seafile-logo.png
 home: https://github.com/gera-corp-org/helm-seafile
 description: Seafile Server, Reliable and Performant File Sync and Share Solution on Kubernetes
@@ -19,6 +19,8 @@ maintainers:
 kubeVersion: ">=1.19.0-0"
 annotations:
   artifacthub.io/changes: |
+    - kind: changed
+      description: "Seafile 13.0.28 (13.0.26 and 13.0.27 were never published)"
     - kind: fixed
       description: "0.3.1 published without a provenance file despite announcing signatures — signing was conditional and the condition silently saw an empty secret. Signing is now unconditional and the published chart is pulled back from the registry and verified before the job succeeds"
     - kind: added
@@ -51,7 +53,7 @@ annotations:
       description: "Passwords moved into a Secret and are wired in via secretKeyRef; they no longer appear in plain text in the pod spec"
   artifacthub.io/images: |
     - name: seafile
-      image: docker.io/seafileltd/seafile-mc:13.0.25
+      image: docker.io/seafileltd/seafile-mc:13.0.28
     - name: mariadb
       image: docker.io/mariadb:11.4
     - name: redis

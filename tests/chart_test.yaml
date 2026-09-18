@@ -12,4 +12,4 @@ tests:
     asserts:
       - equal:
           path: metadata.labels["app.kubernetes.io/version"]
-          value: "13.0.25"
+          value: "13.0.28"
