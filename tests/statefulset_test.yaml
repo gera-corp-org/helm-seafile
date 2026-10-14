@@ -13,7 +13,7 @@ tests:
     asserts:
       - equal:
           path: spec.template.spec.containers[0].image
-          value: docker.io/seafileltd/seafile-mc:13.0.28
+          value: docker.io/seafileltd/seafile-mc:14.0.9
 
   - it: selector and pod carry a component label distinguishing them from mariadb/redis
     template: statefulset.yaml
@@ -160,3 +160,44 @@ tests:
       - equal:
           path: spec.replicas
           value: 1
+
+  - it: ENABLE_SEAFDAV follows webdav.enabled when it is on
+    template: statefulset.yaml
+    set:
+      seafile.webdav.enabled: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: ENABLE_SEAFDAV
+            value: "true"
+
+  - it: ENABLE_SEAFDAV is explicitly false when webdav is off
+    template: statefulset.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: ENABLE_SEAFDAV
+            value: "false"
+
+  - it: SEAFDAV_WORKERS only when workers is set
+    template: statefulset.yaml
+    set:
+      seafile.webdav.enabled: true
+      seafile.webdav.workers: 5
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: SEAFDAV_WORKERS
+            value: "5"
+
+  - it: no SEAFDAV_WORKERS by default
+    template: statefulset.yaml
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          any: true
+          content:
+            name: SEAFDAV_WORKERS

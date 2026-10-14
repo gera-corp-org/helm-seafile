@@ -84,6 +84,12 @@
           "properties": {
             "enabled": {
               "type": "boolean"
+            },
+            "workers": {
+              "type": [
+                "string",
+                "integer"
+              ]
             }
           }
         },
