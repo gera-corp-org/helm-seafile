@@ -75,6 +75,15 @@ spec:
           value: {{ eq .Values.seafile.protocol "https" | quote }}
         - name: SEAFILE_LOG_TO_STDOUT
           value: {{ .Values.seafile.logToStdout | quote }}
+        # From Seafile 14 this variable alone decides whether WebDAV runs;
+        # the "enabled" flag in seafdav.conf is ignored. Always emitted, so a
+        # disabled WebDAV is explicit rather than left to the image default.
+        - name: ENABLE_SEAFDAV
+          value: {{ .Values.seafile.webdav.enabled | quote }}
+        {{- with .Values.seafile.webdav.workers }}
+        - name: SEAFDAV_WORKERS
+          value: {{ . | quote }}
+        {{- end }}
         - name: INIT_SEAFILE_ADMIN_EMAIL
           valueFrom:
             secretKeyRef:

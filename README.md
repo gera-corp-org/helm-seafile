@@ -27,7 +27,7 @@ Required values: `seafile.serverHostname`, `seafile.jwtPrivateKey`,
 
 ```bash
 helm install seafile oci://ghcr.io/gera-corp-org/helm-charts/seafile \
-  --version 0.3.3 \
+  --version 0.4.0 \
   --namespace seafile --create-namespace \
   --set seafile.serverHostname=seafile.example.com \
   --set seafile.jwtPrivateKey=$(pwgen -s 40 1) \
@@ -43,7 +43,7 @@ For a persistent configuration, keep these same values in
 
 ```bash
 helm install seafile oci://ghcr.io/gera-corp-org/helm-charts/seafile \
-  --version 0.3.3 \
+  --version 0.4.0 \
   --namespace seafile --create-namespace \
   --values my-values.yaml
 ```
@@ -65,7 +65,7 @@ curl -fsSL https://raw.githubusercontent.com/gera-corp-org/helm-seafile/master/K
   | gpg --dearmor > ~/.gnupg/seafile-chart.gpg
 
 helm install seafile oci://ghcr.io/gera-corp-org/helm-charts/seafile \
-  --version 0.3.3 --verify --keyring ~/.gnupg/seafile-chart.gpg \
+  --version 0.4.0 --verify --keyring ~/.gnupg/seafile-chart.gpg \
   --values my-values.yaml
 ```
 
@@ -74,8 +74,8 @@ signature does not match, or the chart digest differs from the one that
 was signed. To check a downloaded chart without installing it:
 
 ```bash
-helm pull oci://ghcr.io/gera-corp-org/helm-charts/seafile --version 0.3.3 --prov
-helm verify --keyring ~/.gnupg/seafile-chart.gpg seafile-0.3.3.tgz
+helm pull oci://ghcr.io/gera-corp-org/helm-charts/seafile --version 0.4.0 --prov
+helm verify --keyring ~/.gnupg/seafile-chart.gpg seafile-0.4.0.tgz
 ```
 
 Compare the fingerprint above against the key you imported before
@@ -156,7 +156,8 @@ Secret entirely.
 | `seafile.admin.email` | Email of the first admin account | `""` |
 | `seafile.admin.password` | Password of the first admin account | `""` |
 | `seafile.jwtPrivateKey` | JWT key (notification-server, SeaDoc); generate with `pwgen -s 40 1` | `""` |
-| `seafile.webdav.enabled` | Enable the WebDAV endpoint | `false` |
+| `seafile.webdav.enabled` | Enable WebDAV (sets `ENABLE_SEAFDAV`, opens port 8080 and the Ingress route) | `false` |
+| `seafile.webdav.workers` | `SEAFDAV_WORKERS`; empty keeps the image default | `""` |
 | `seafile.existingSecret` | Name of an existing Secret to use instead of the one the chart creates | `""` |
 | `seafile.extraEnv` | Raw `env` list for the Seafile container, applied last | `[]` |
 | `seafile.extraEnvFrom` | Raw `envFrom` list for the Seafile container | `[]` |
@@ -297,7 +298,7 @@ StatefulSets, disable `enabled` and set the host:
 
 ```bash
 helm install seafile oci://ghcr.io/gera-corp-org/helm-charts/seafile \
-  --version 0.3.3 \
+  --version 0.4.0 \
   --set seafile.serverHostname=seafile.example.com \
   --set seafile.jwtPrivateKey=$(pwgen -s 40 1) \
   --set seafile.admin.email=admin@example.com \
@@ -317,35 +318,18 @@ pass any value if you're not setting `database.existingSecret`.
 
 ## WebDAV
 
-**Requires one manual step — the chart cannot enable WebDAV by
-itself.**
-
-`seafile.webdav.enabled=true` opens port `8080` on the container and
-the Service, and adds a route on the `ingress.webdav.path` path
-(`/seafdav` by default) when Ingress is enabled:
-
 ```bash
 --set seafile.webdav.enabled=true \
 --set ingress.enabled=true \
 --set ingress.host=seafile.example.com
 ```
 
-That's enough on the networking side, but not for Seafile itself: it
-only reads the enable flag from `seafdav.conf`, and
-`setup-seafile-mysql.py` inside the image hardcodes `enabled = false`
-there. There's no environment variable for this — [adding one was
-proposed back in 2019](https://github.com/haiwen/seafile-docker/pull/187)
-specifically for Kubernetes, but the PR was never merged. The
-[Seafile documentation](https://manual.seafile.com/13.0/extension/webdav/)
-says to edit the file and restart the server.
-
-Until the flag is set, `/seafdav` returns `502`. To enable it:
-
-```bash
-kubectl exec -n seafile seafile-0 -- \
-  sed -i 's/^enabled = false/enabled = true/' /shared/seafile/conf/seafdav.conf
-kubectl rollout restart sts/seafile -n seafile
-```
+This opens port `8080` on the container and the Service, adds a route on
+`ingress.webdav.path` (`/seafdav` by default) when Ingress is enabled, and
+sets `ENABLE_SEAFDAV=true` in the Seafile container. From Seafile 14 that
+variable alone decides whether WebDAV runs — the `enabled` flag in
+`seafdav.conf` is ignored — so nothing has to be edited by hand.
+`seafile.webdav.workers` sets `SEAFDAV_WORKERS`.
 
 Verify (success is `207 Multi-Status`):
 
@@ -354,9 +338,13 @@ curl -u 'admin@example.com:PASSWORD' -X PROPFIND -H 'Depth: 0' \
   -o /dev/null -w '%{http_code}\n' https://seafile.example.com/seafdav/
 ```
 
-The edit lives in the PVC and survives pod restarts, but won't survive
-the volume being recreated. Large uploads over WebDAV behind Traefik
-also need the section below.
+**Upgrading from Seafile 13 with WebDAV on.** On 13 the only way to turn
+WebDAV on was editing `enabled = true` into `seafdav.conf`, because the
+image offered no variable for it. Seafile 14 no longer reads that flag:
+an upgrade that leaves `seafile.webdav.enabled` false keeps the old edit
+in place and still comes up with WebDAV off, without an error. Set
+`seafile.webdav.enabled=true` before upgrading. The `enabled` and
+`workers` lines left in `seafdav.conf` are harmless and can be removed.
 
 ## Traefik
 
@@ -373,6 +361,28 @@ uploads (WebDAV in particular). This option only makes sense with
 --set ingress.className=traefik \
 --set ingress.traefik.buffering=true
 ```
+
+## Upgrading from 0.3 to 0.4
+
+0.4 moves Seafile from 13 to 14. Two things to do before upgrading:
+
+1. **Back up the database.** On first start Seafile 14 migrates the
+   schema by itself — on a test install `seahub_db` went from 255 to 273
+   tables — and there is no way back to 13 short of restoring that
+   backup:
+
+   ```bash
+   kubectl exec -n seafile seafile-mariadb-0 -- sh -c \
+     'mariadb-dump -uroot -p"$MARIADB_ROOT_PASSWORD" --all-databases --single-transaction' \
+     > seafile-db-$(date +%F).sql
+   ```
+
+2. **If WebDAV is in use, set `seafile.webdav.enabled=true`.** See the
+   WebDAV section: Seafile 14 ignores the flag in `seafdav.conf`, so a
+   WebDAV that was switched on there turns off silently after the upgrade.
+
+Nothing else in the chart's values changes. The upgrade itself is one
+restart of the Seafile pod; MariaDB and Redis are untouched.
 
 ## Migrating from 0.1.5 to 0.2.0
 
@@ -417,7 +427,7 @@ management without recreating the volume — via
 
 ```bash
 helm install seafile oci://ghcr.io/gera-corp-org/helm-charts/seafile \
-  --version 0.3.3 \
+  --version 0.4.0 \
   --set seafile.serverHostname=seafile.example.com \
   --set seafile.jwtPrivateKey=$(pwgen -s 40 1) \
   --set seafile.admin.email=admin@example.com \

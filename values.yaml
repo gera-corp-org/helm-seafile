@@ -29,7 +29,11 @@ seafile:
   # pwgen -s 40 1
   jwtPrivateKey: ""
   webdav:
+    # Sets ENABLE_SEAFDAV. Seafile 14 reads only this variable; the
+    # "enabled" flag in seafdav.conf is ignored.
     enabled: false
+    # SEAFDAV_WORKERS; empty leaves the image default.
+    workers: ""
   # Secret with the admin-email, admin-password, jwt-private-key keys.
   # If set, the chart won't create its own Secret.
   existingSecret: ""
