@@ -1,8 +1,8 @@
 apiVersion: v2
 name: seafile
 type: application
-version: 0.4.0
-appVersion: "14.0.9"
+version: 0.4.1
+appVersion: "14.0.11"
 icon: https://www.seafile.com/media/img/seafile-logo.png
 home: https://github.com/gera-corp-org/helm-seafile
 description: Seafile Server, Reliable and Performant File Sync and Share Solution on Kubernetes
@@ -19,6 +19,8 @@ maintainers:
 kubeVersion: ">=1.19.0-0"
 annotations:
   artifacthub.io/changes: |
+    - kind: changed
+      description: "Seafile 14.0.11. Upstream published no changelog entry, forum post or release for it — 14.0.10 was skipped the same way 13.0.26 and 13.0.27 were — so this bump rests on the image alone and not on any statement about what it contains"
     - kind: changed
       description: "BREAKING: Seafile 14.0.9. Upgrading from 13 migrates the database on first start (seahub_db 255 -> 273 tables) and cannot be undone — back up the database first"
     - kind: fixed
@@ -59,7 +61,7 @@ annotations:
       description: "Passwords moved into a Secret and are wired in via secretKeyRef; they no longer appear in plain text in the pod spec"
   artifacthub.io/images: |
     - name: seafile
-      image: docker.io/seafileltd/seafile-mc:14.0.9
+      image: docker.io/seafileltd/seafile-mc:14.0.11
     - name: mariadb
       image: docker.io/mariadb:11.4
     - name: redis
